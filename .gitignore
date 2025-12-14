@@ -1,14 +1,18 @@
-
 *.*
 
-!HDHomeRunEPG_To_XmlTv.py
-!HDHomeRunEPG_To_XmlTv_v1.py
-!README.md
-!bmc_qr.png
+!*.py
+!*.md
+!*.txt
+!*.png
 !.gitignore
 !.vscode/
 !.vscode/launch.json
 !binaries/*.zip
 !binaries/*.exe
+!Dockerfile
+!*.yml
+!.github/
 
 build/
+__pycache__/
+*.pyc

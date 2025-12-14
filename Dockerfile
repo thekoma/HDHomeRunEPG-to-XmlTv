@@ -1,20 +1,17 @@
-FROM python:3.14-slim
+FROM python:3.9-slim
 
-WORKDIR /app
+WORKDIR /code
 
-COPY requirements.txt ./
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/* \
-	&& pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
 
-COPY HDHomeRunEPG_To_XmlTv.py ./
-COPY run_tvguide.sh ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-ENV HOST=localhost
-ENV FILENAME=output.xml
-# Add crontab entry to run the script every day at 1am
-RUN chmod +x /app/run_tvguide.sh
+# Copy the library and application
+COPY hdhomerun_epg/ /code/hdhomerun_epg/
+COPY app/ /code/app/
 
-RUN echo "0 1 * * * /app/run_tvguide.sh" > /etc/cron.d/tvguide-cron
-RUN chmod 0644 /etc/cron.d/tvguide-cron && crontab /etc/cron.d/tvguide-cron
+# Expose port
+EXPOSE 8000
 
-CMD ["cron", "-f"]
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

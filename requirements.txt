@@ -2,3 +2,8 @@ argparse
 pytz
 requests
 tzlocal
+pydantic-settings
+fastapi
+uvicorn
+pytest
+httpx

@@ -1,31 +1,16 @@
-
+version: '3.8'
 
 services:
-  # jellyfin:
-  #   image: jellyfin/jellyfin
-  #   container_name: jellyfin
-  #   ports:
-  #     - 8096:8096
-  #   volumes:
-  #     - output_data:/app/output
-  #   restart: 'unless-stopped'
-  #   environment:
-  #     - JELLYFIN_PublishedServerUrl=http://jellyfin.local.com
-  #   extra_hosts:
-  #     - 'host.docker.internal:host-gateway'
-
-  tvguide:
-    image: tvguide
-    container_name: tvguide
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - output_data:/app/output
+  hdhomerun-epg:
+    build: .
+    container_name: hdhomerun-epg
+    ports:
+      - "8000:8000"
     environment:
-      - HOST=192.168.1.100
-      - FILENAME=/app/output/output.xml
-    restart: 'unless-stopped'
-
-volumes:
-  output_data:
+      - HDHOMERUN_HOST=192.168.1.100
+      - HDHOMERUN_EPG_DAYS=7
+      - HDHOMERUN_EPG_HOURS=3
+      - HDHOMERUN_DEBUG_MODE=on
+    volumes:
+      - ./epg_cache.db:/code/epg_cache.db
+    restart: unless-stopped
