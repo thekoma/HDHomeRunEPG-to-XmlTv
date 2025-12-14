@@ -7,3 +7,4 @@ fastapi
 uvicorn
 pytest
 httpx
+jinja2

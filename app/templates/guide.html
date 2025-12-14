@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDHomeRun TV Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            background: #1e293b;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-100 min-h-screen p-4 font-sans text-sm">
+    <div class="h-screen flex flex-col">
+        <!-- Header & Filters -->
+        <header
+            class="flex justify-between items-center bg-slate-800 p-4 rounded-xl shadow-md border-b border-slate-700 shrink-0 mb-4 z-30">
+            <div class="flex items-center gap-6">
+                <div>
+                    <h1
+                        class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                        TV Guide</h1>
+                </div>
+                <!-- Filters -->
+                <div class="flex gap-4">
+                    <input type="text" id="filter-channel" onkeyup="filterGuide()" placeholder="Filter Channel..."
+                        class="bg-slate-700 text-white px-3 py-1.5 rounded-md border border-slate-600 focus:outline-none focus:border-blue-500 text-sm">
+                    <input type="text" id="filter-program" onkeyup="filterGuide()" placeholder="Filter Program..."
+                        class="bg-slate-700 text-white px-3 py-1.5 rounded-md border border-slate-600 focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+            </div>
+            <a href="/" class="text-slate-400 hover:text-white transition-colors">← Dashboard</a>
+        </header>
+
+        <!-- Main Guide Container -->
+        <div class="flex-1 overflow-hidden bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col relative">
+
+            {% if not channels %}
+            <div class="text-slate-500 italic p-12 text-center">No EPG data available</div>
+            {% endif %}
+
+            <!-- Scrollable Area -->
+            <div class="overflow-auto custom-scrollbar flex-1 relative" id="guide-container">
+                {% for channel_id, data in grouped_data.items() %}
+                <div class="flex border-b border-slate-700 group/channel channel-row"
+                    data-channel-name="{{ data.channel.GuideName|lower }}">
+                    <!-- Left: Channel Header (Sticky) -->
+                    <div
+                        class="w-48 shrink-0 bg-slate-800 p-3 border-r border-slate-700 sticky left-0 z-20 flex items-center shadow-lg">
+                        {% if data.channel.ImageURL %}
+                        <img src="{{ data.channel.ImageURL }}"
+                            class="h-10 w-16 object-contain bg-white rounded-md mr-3">
+                        {% else %}
+                        <div class="h-10 w-16 bg-slate-600 rounded-md mr-3 flex items-center justify-center text-xs">No
+                            Img</div>
+                        {% endif %}
+                        <div class="min-w-0">
+                            <div class="font-bold text-white truncate">{{ data.channel.GuideName }}</div>
+                            <div class="text-xs text-blue-400 font-mono">{{ data.channel.GuideNumber }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Timeline -->
+                    <div class="flex p-2 items-center min-w-0">
+                        {% if not data.programmes %}
+                        <div class="text-slate-500 italic p-2 text-xs">No info</div>
+                        {% else %}
+                        {% for prog in data.programmes %}
+                        <!-- Program Card -->
+                        <div class="flex-none bg-slate-700/80 hover:bg-blue-600/80 rounded border border-slate-600 hover:border-blue-400 transition-all cursor-pointer relative overflow-hidden group/card mr-1 h-16 program-card"
+                            style="width: {{ prog.width_px }}px;" data-program-title="{{ prog.Title|lower }}"
+                            onclick='openModal({{ prog|tojson }})'>
+
+                            <!-- Progress Bar -->
+                            {% if prog.progress_percent > 0 and prog.progress_percent < 100 %} <div
+                                class="absolute bottom-0 left-0 h-1 bg-green-500 z-10"
+                                style="width: {{ prog.progress_percent }}%;">
+                        </div>
+                        {% endif %}
+
+                        <div class="p-2 h-full flex flex-col justify-center relative z-10">
+                            <div class="font-bold text-white text-xs truncate leading-tight">{{ prog.Title }}</div>
+                            <div class="text-[10px] text-slate-300 truncate flex justify-between mt-0.5">
+                                <span>{{ prog.start_str }}</span>
+                                {% if prog.EpisodeTitle %}
+                                <span class="opacity-70 ml-1 truncate">- {{ prog.EpisodeTitle }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="modal-overlay"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4"
+        onclick="closeModal(event)">
+        <div class="bg-slate-800 rounded-2xl shadow-2xl border border-slate-600 w-full max-w-lg overflow-hidden transform transition-all scale-95 opacity-0"
+            id="modal-content">
+            <!-- Modal Header with Image -->
+            <div class="relative h-40 bg-slate-700">
+                <img id="modal-img" src="" class="w-full h-full object-cover opacity-60">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-800 to-transparent"></div>
+                <button onclick="closeModal()"
+                    class="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+                <div class="absolute bottom-4 left-6 right-6">
+                    <h2 id="modal-title" class="text-2xl font-bold text-white shadow-black drop-shadow-md"></h2>
+                    <p id="modal-episode" class="text-blue-300 font-semibold text-sm mt-1"></p>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6">
+                <div
+                    class="flex justify-between items-center text-slate-400 text-xs font-mono mb-4 border-b border-slate-700 pb-3">
+                    <span id="modal-time"></span>
+                    <span id="modal-duration"></span>
+                </div>
+
+                <p id="modal-desc"
+                    class="text-slate-300 text-sm leading-relaxed max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Description -->
+                </p>
+
+                <div class="mt-6 flex justify-end">
+                    <button onclick="closeModal()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterGuide() {
+            const chFilter = document.getElementById('filter-channel').value.toLowerCase();
+            const progFilter = document.getElementById('filter-program').value.toLowerCase();
+            const rows = document.querySelectorAll('.channel-row');
+
+            rows.forEach(row => {
+                const chName = row.getAttribute('data-channel-name');
+                const progCards = row.querySelectorAll('.program-card');
+
+                let hasVisibleProgram = false;
+
+                // Hide programs if filter set
+                progCards.forEach(card => {
+                    if (!progFilter) {
+                        card.style.display = '';
+                        card.style.opacity = '1';
+                        hasVisibleProgram = true;
+                    } else {
+                        const title = card.getAttribute('data-program-title');
+                        if (title.includes(progFilter)) {
+                            card.style.display = '';
+                            card.style.opacity = '1';
+                            hasVisibleProgram = true;
+                        } else {
+                            // Grey out or hide? Let's opacity drop to highlight matches
+                            card.style.opacity = '0.1';
+                            // Or display none?
+                            // card.style.display = 'none'; 
+                        }
+                    }
+                });
+
+                // Row visibility based on Channel Name AND if it has matching programs (if prog filter active)
+                if (chName.includes(chFilter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function openModal(prog) {
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('modal-content');
+
+            document.getElementById('modal-title').innerText = prog.Title;
+            document.getElementById('modal-episode').innerText = prog.EpisodeTitle || '';
+            document.getElementById('modal-desc').innerText = prog.Synopsis || 'No description available.';
+            document.getElementById('modal-time').innerText = `${prog.start_str} - ${prog.end_str}`;
+
+            // Duration
+            const minutes = Math.round((prog.EndTime - prog.StartTime) / 60);
+            document.getElementById('modal-duration').innerText = `${minutes} min`;
+
+            // Image (Try ImageURL, fallback to channel logo maybe? Or generic)
+            // HDHomeRun often provides 'ImageURL' at program level if enriched, or 'ThumbnailURL'
+            // We'll use what's passed.
+            const imgUrl = prog.ImageURL || 'https://via.placeholder.com/600x300/1e293b/475569?text=No+Preview';
+            document.getElementById('modal-img').src = imgUrl;
+
+            overlay.classList.remove('hidden');
+            // Animation
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal(e) {
+            if (e && e.target.id !== 'modal-overlay' && !e.target.closest('button')) return;
+
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('modal-content');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 200);
+        }
+    </script>
+</body>
+
+</html>

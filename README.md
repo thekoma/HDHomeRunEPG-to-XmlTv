@@ -44,6 +44,7 @@ The application is fully configurable via Environment Variables.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | **Responsive Root**. Returns **Dashboard (HTML)** for browsers or **Status (JSON)** for API clients. |
+| `GET` | `/guide` | **TV Guide**. Visual TV Guide showing programs for the next 24 hours. |
 | `GET` | `/epg.xml` | **Main Endpoint**. Fetches and returns the generated XMLTV file. |
 | `GET` | `/healthcheck` | **Liveness**. Returns `{"status": "ok"}`. |
 | `DELETE`| `/cache` | **Maintenance**. Manually clears the entire local cache. |

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDHomeRun EPG Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+            extend: {
+                colors: {
+                slate: {
+                    850: '#1e293b',
+                    900: '#0f172a',
+                }
+                }
+            }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-gray-100 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+                    HDHomeRun EPG
+                </h1>
+                <p class="text-slate-400 mt-2">Service Status & Cache Inspector</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/guide" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                    <span>📺</span> TV Guide
+                </a>
+                <a href="/docs" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                    <span>📚</span> API Docs
+                </a>
+                <button onclick="clearCache()" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
+                    <span>🗑️</span> Clear Cache
+                </button>
+            </div>
+        </header>
+
+        <!-- Status Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <h3 class="text-slate-400 text-sm font-semibold uppercase">Status</h3>
+                <p class="text-2xl font-bold text-green-400 mt-2 flex items-center gap-2">
+                    <span class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></span> Online
+                </p>
+            </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <h3 class="text-slate-400 text-sm font-semibold uppercase">Cached Chunks</h3>
+                <p id="stat-chunks" class="text-2xl font-bold text-blue-400 mt-2">--</p>
+            </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <h3 class="text-slate-400 text-sm font-semibold uppercase">Total Size</h3>
+                <p id="stat-size" class="text-2xl font-bold text-purple-400 mt-2">--</p>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-white">Cache Contents</h2>
+            </div>
+            <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-800 text-slate-400 uppercase text-xs tracking-wider sticky top-0 z-10 shadow-md">
+                        <tr>
+                            <th class="p-3 bg-slate-800">Start Time</th>
+                            <th class="p-3 bg-slate-800">End Time</th>
+                            <th class="p-3 bg-slate-800">Size</th>
+                            <th class="p-3 bg-slate-800">Age</th>
+                            <th class="p-3 bg-slate-800">Fetched At</th>
+                            <th class="p-3 bg-slate-800">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cache-table-body" class="divide-y divide-slate-700">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="empty-state" class="p-12 text-center text-slate-500 hidden">
+                <p class="text-lg">Cache is empty 🍃</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchCache() {
+            try {
+                const res = await fetch('/cache');
+                const chunks = await res.json();
+                renderTable(chunks);
+                updateStats(chunks);
+            } catch (e) {
+                console.error("Failed to fetch cache", e);
+            }
+        }
+
+        async function clearCache() {
+            if(!confirm("Are you sure you want to delete all cached data?")) return;
+            try {
+                await fetch('/cache', { method: 'DELETE' });
+                fetchCache();
+            } catch (e) {
+                alert("Error clearing cache");
+            }
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+        
+        function updateStats(chunks) {
+            document.getElementById('stat-chunks').innerText = chunks.length;
+            const totalSize = chunks.reduce((acc, curr) => acc + curr.size_bytes, 0);
+            document.getElementById('stat-size').innerText = formatBytes(totalSize);
+        }
+
+        function renderTable(chunks) {
+            const tbody = document.getElementById('cache-table-body');
+            const emptyState = document.getElementById('empty-state');
+            
+            tbody.innerHTML = '';
+
+            if (!chunks || chunks.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            chunks.forEach(chunk => {
+                const startDate = new Date(chunk.start_time * 1000).toLocaleString();
+                const endDate = new Date(chunk.end_time * 1000).toLocaleString();
+                const fetchedDate = new Date(chunk.fetched_at * 1000).toLocaleString();
+                const ageSeconds = Math.floor((Date.now() / 1000) - chunk.fetched_at);
+                
+                let statusHtml = '<span class="text-green-400 font-bold text-xs uppercase tracking-wide">Fresh</span>';
+                if (ageSeconds > 86400) { // 24h
+                    statusHtml = '<span class="text-orange-400 font-bold text-xs uppercase tracking-wide">Stale</span>';
+                }
+
+                const row = `
+                    <tr class="hover:bg-slate-700/50 transition-colors">
+                        <td class="p-3 font-mono text-xs text-blue-300">${startDate}</td>
+                        <td class="p-3 font-mono text-xs text-blue-300">${endDate}</td>
+                        <td class="p-3 text-slate-300 text-sm">${formatBytes(chunk.size_bytes)}</td>
+                        <td class="p-3 text-slate-300 text-sm">${ageSeconds}s ago</td>
+                        <td class="p-3 text-slate-400 text-xs">${fetchedDate}</td>
+                        <td class="p-3">${statusHtml}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Initial load
+        fetchCache();
+    </script>
+</body>
+</html>

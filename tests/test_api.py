@@ -44,3 +44,25 @@ def test_root_json_status(monkeypatch, temp_db_path):
     assert response.status_code == 200
     assert response.json()["status"] == "online"
     assert "cache_entries" in response.json()
+
+def test_tv_guide_endpoint(monkeypatch):
+    # Mock client.fetch_epg_data to avoid API calls and speed up test
+    from hdhomerun_epg import client as lib_client
+    
+    def mock_fetch(self, days=1, hours=4):
+        import time
+        now = int(time.time())
+        return {
+            "channels": [{"GuideNumber": "1", "GuideName": "TEST", "ImageURL": ""}],
+            "programmes": [
+                {"GuideNumber": "1", "StartTime": now + 60, "EndTime": now + 3660, "Title": "Test Prog"}
+            ]
+        }
+    
+    monkeypatch.setattr(lib_client.HDHomeRunClient, "fetch_epg_data", mock_fetch)
+    
+    response = client.get("/guide")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "TV Guide" in response.text
+    assert "Test Prog" in response.text

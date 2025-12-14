@@ -4,6 +4,7 @@
 !*.md
 !*.txt
 !*.png
+!*.html
 !.gitignore
 !.vscode/
 !.vscode/launch.json
