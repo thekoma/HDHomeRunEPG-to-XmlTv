@@ -1,0 +1,39 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended"
+    ],
+    "baseBranches": [
+        "main"
+    ],
+    "enabledManagers": [
+        "pip_requirements",
+        "dockerfile",
+        "github-actions"
+    ],
+    "packageRules": [
+        {
+            "description": "Automerge non-major updates if tests pass",
+            "matchUpdateTypes": [
+                "minor",
+                "patch",
+                "pin",
+                "digest"
+            ],
+            "automerge": true
+        },
+        {
+            "description": "Group python dependencies to avoid too many releases",
+            "matchLanguages": [
+                "python"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
+            ],
+            "groupName": "all python updates"
+        }
+    ],
+    "timezone": "Europe/Rome",
+    "prConcurrentLimit": 10
+}
