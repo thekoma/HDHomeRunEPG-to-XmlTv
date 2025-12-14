@@ -9,15 +9,39 @@
 
 Refactored Python library and FastAPI service to fetch EPG from HDHomeRun devices and serve it as XMLTV.
 
-## 🌟 Data Flow
+## ✨ Features
 
-1. **Discovery**: Finds the HDHomeRun device and its Auth Token.
-2. **Lineup**: Fetches the channel list (`lineup.json`).
-3. **EPG Fetching**: 
-   - Requests EPG data in chunks (default 2 hours) to respect API limits.
-   - **Smart Caching**: Checks local SQLite DB (`epg_cache.db`) before hitting the API.
-   - **Time Alignment**: Requests are aligned to fixed time grids (e.g. 12:00, 14:00) to maximize cache hits.
-4. **XML Generation**: Converts the JSON data into XMLTV format.
+**For Media Server Users (Jellyfin, Plex, Emby):**
+*   📺 **Free EPG Data**: Extracts the over-the-air guide data that comes with your TV signal. No paid subscriptions needed!
+*   🔌 **Plug & Play**: Acts as a simple bridge. Point your media server to `http://.../epg.xml` and you're done.
+*   🚀 **Performance**: Caches data locally so your automated guide updates in Jellyfin finish in seconds, not minutes.
+*   👀 **Web Interface**: Includes a beautiful built-in TV Guide to check what's on without opening your media player.
+
+**Technical Highlights:**
+*   🐍 **Modern Stack**: Built with Python 3.9+ and FastAPI.
+*   💾 **Smart Caching**: SQLite-based caching with 24h TTL to minimize calls to the HDHomeRun hardware.
+*   🐳 **Docker First**: Ready-to-use container for easy deployment.
+*   🔍 **Observability**: Prometheus-ready metrics and detailed logs.
+
+## 🔄 How It Works
+
+This service acts as a proxy and translator between your hardware and your media server.
+
+```mermaid
+graph LR
+    A[HDHomeRun Device] -- "JSON (Slow)" --> B(EPG Service)
+    B <-- "Read/Write" --> C[(SQLite Cache)]
+    B -- "XMLTV (Fast)" --> D[Jellyfin / Plex / Emby]
+    E[User] -- "Web Browser" --> B
+    
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#ccf,stroke:#333,stroke-width:1px
+```
+
+1.  **Discovery**: Finds your HDHomeRun device on the local network.
+2.  **Fetch & Cache**: Downloads the schedule in small chunks and saves it to a local database.
+3.  **Serve**: Generates a standard `epg.xml` file that any XMLTV-compatible software can ingest.
+
 
 ## 📊 Project Status
 
@@ -25,7 +49,24 @@ Refactored Python library and FastAPI service to fetch EPG from HDHomeRun device
 -   **Deployment**: [Deployment Guide](DEPLOY.md) (Helm, ArgoCD, FluxCD).
 -   **Next Steps**: Authenticated endpoints (optional), multiple device support (optional).
 
+
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](images/dashboard.png)
+
+### TV Guide
+
+![TV Guide Compact](images/guide01.png)
+
+![TV Guide](images/guide02.png)
+*(Detailed program view)*
+
+### API Documentation
+![Swagger UI](images/openapi.png)
+
 ## 🚀 Usage
+
 
 ### 🐳 Docker (Recommended)
 
@@ -77,3 +118,8 @@ The application is fully configurable via Environment Variables.
    uvicorn app.main:app --reload
    ```
 
+
+## 🙏 Credits
+
+This project is a fork and modernization of [HDHomeRunEPG-to-XmlTv](https://github.com/IncubusVictim/HDHomeRunEPG-to-XmlTv) by @IncubusVictim.
+The original reverse engineering and core logic provided the critical foundation for this application.
