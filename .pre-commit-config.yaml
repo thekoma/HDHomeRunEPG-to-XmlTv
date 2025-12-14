@@ -25,8 +25,12 @@ repos:
     hooks:
       - id: gitleaks
 
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.1
-    hooks:
-      - id: yamllint
-        args: [-d, "{extends: relaxed, rules: {line-length: {max: 120}}}"]
+  -  repo: https://github.com/pre-commit/pre-commit-hooks
+     rev: v5.0.0
+     hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args:
+          - '--allow-multiple-documents'
+      - id: check-added-large-files

@@ -16,7 +16,7 @@ deployment:
   volumes:
     data:
       emptyDir: {} # Override with pvc in production if needed, or use persistence section
-  
+
   volumeMounts:
     data:
       mountPath: /data

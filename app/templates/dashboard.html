@@ -124,7 +124,7 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
         }
-        
+
         function updateStats(chunks) {
             document.getElementById('stat-chunks').innerText = chunks.length;
             const totalSize = chunks.reduce((acc, curr) => acc + curr.size_bytes, 0);
@@ -134,7 +134,7 @@
         function renderTable(chunks) {
             const tbody = document.getElementById('cache-table-body');
             const emptyState = document.getElementById('empty-state');
-            
+
             tbody.innerHTML = '';
 
             if (!chunks || chunks.length === 0) {
@@ -149,7 +149,7 @@
                 const endDate = new Date(chunk.end_time * 1000).toLocaleString();
                 const fetchedDate = new Date(chunk.fetched_at * 1000).toLocaleString();
                 const ageSeconds = Math.floor((Date.now() / 1000) - chunk.fetched_at);
-                
+
                 let statusHtml = '<span class="text-green-400 font-bold text-xs uppercase tracking-wide">Fresh</span>';
                 if (ageSeconds > 86400) { // 24h
                     statusHtml = '<span class="text-orange-400 font-bold text-xs uppercase tracking-wide">Stale</span>';

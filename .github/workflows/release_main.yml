@@ -28,7 +28,7 @@ jobs:
           MONTH=$(date +'%m')
           PREFIX="${YEAR}.${MONTH}"
           LAST_TAG=$(git tag --list "${PREFIX}.*" | sort -V | tail -n 1)
-          
+
           if [ -z "$LAST_TAG" ]; then
             NEW_TAG="${PREFIX}.0"
           else
@@ -44,7 +44,7 @@ jobs:
         run: |
           # Finds the previous tag reachable from HEAD
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
+
           if [ -z "$PREV_TAG" ]; then
             echo "No previous tag found. Skipping diff analysis."
             echo "HAS_DIFF=false" >> $GITHUB_ENV
@@ -53,7 +53,7 @@ jobs:
             # Get diff of relevant files, limit size to avoid token overflow
             # 2000 lines approx
             git diff $PREV_TAG HEAD -- 'app/' 'hdhomerun_epg/' '*.py' '*.html' > raw_diff.txt
-            
+
             if [ ! -s raw_diff.txt ]; then
                echo "Diff is empty."
                echo "HAS_DIFF=false" >> $GITHUB_ENV
@@ -75,11 +75,11 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
-            You are a Technical Release Manager. 
+            You are a Technical Release Manager.
             Analyze the following code changes and write a bullet-point summary of the technical changes for the Changelog.
-            Focus on feature additions, bug fixes, and architectural changes. 
+            Focus on feature additions, bug fixes, and architectural changes.
             Keep it concise and professional.
-            
+
             Code Diff:
             ${{ env.DIFF_CONTENT }}
 
@@ -89,14 +89,14 @@ jobs:
         run: |
           TAG="${{ steps.version.outputs.new_tag }}"
           NOTES=""
-          
+
           if [ "${{ env.HAS_DIFF }}" == "true" ] && [ "${{ steps.gemini.outcome }}" == "success" ]; then
             NOTES="## AI Summary 🤖
             ${{ steps.gemini.outputs.output }}"
           fi
-          
+
           echo "Creating release $TAG..."
-          
+
           # Create release. Pass Gemini notes as description, let GitHub append auto-generated PR list
           gh release create "$TAG" \
             --title "Release $TAG" \

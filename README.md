@@ -33,7 +33,7 @@ graph LR
     B <-- "Read/Write" --> C[(SQLite Cache)]
     B -- "XMLTV (Fast)" --> D[Jellyfin / Plex / Emby]
     E[User] -- "Web Browser" --> B
-    
+
     style B fill:#f9f,stroke:#333,stroke-width:2px
     style C fill:#ccf,stroke:#333,stroke-width:1px
 ```
