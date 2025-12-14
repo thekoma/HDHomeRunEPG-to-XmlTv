@@ -71,6 +71,7 @@ jobs:
         if: env.HAS_DIFF == 'true'
         uses: google-github-actions/run-gemini-cli@v0.1.16
         id: gemini
+        gemini_cli_version: "0.19.0"
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
