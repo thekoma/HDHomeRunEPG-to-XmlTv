@@ -1,5 +1,12 @@
 # HDHomeRun EPG to XMLTV
 
+![CI Status](https://img.shields.io/github/actions/workflow/status/thekoma/HDHomeRunEPG-to-XmlTv/ci.yml?branch=main&style=flat-square&label=CI)
+![GitHub Release](https://img.shields.io/github/v/release/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square&label=Release)
+![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fthekoma%2Fhdhomerunepgxml-blue?style=flat-square&logo=docker&logoColor=white)
+![Python Version](https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square&logo=python&logoColor=white)
+![License](https://img.shields.io/github/license/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square)
+![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)
+
 Refactored Python library and FastAPI service to fetch EPG from HDHomeRun devices and serve it as XMLTV.
 
 ## 🌟 Data Flow
@@ -12,11 +19,20 @@ Refactored Python library and FastAPI service to fetch EPG from HDHomeRun device
    - **Time Alignment**: Requests are aligned to fixed time grids (e.g. 12:00, 14:00) to maximize cache hits.
 4. **XML Generation**: Converts the JSON data into XMLTV format.
 
+## 📊 Project Status
+
+-   **Completed**: Refactoring, Caching, Dashboard, Guide UI, Testing, Docker.
+-   **Deployment**: [Deployment Guide](DEPLOY.md) (Helm, ArgoCD, FluxCD).
+-   **Next Steps**: Authenticated endpoints (optional), multiple device support (optional).
+
 ## 🚀 Usage
 
 ### 🐳 Docker (Recommended)
 
+One official Docker image is available at `ghcr.io/thekoma/hdhomerunepgxml`.
+
 Run the service using Docker Compose:
+
 
 ```bash
 docker compose up --build -d

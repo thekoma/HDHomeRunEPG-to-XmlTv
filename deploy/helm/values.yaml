@@ -1,0 +1,50 @@
+applicationName: hdhomerun-epg
+deployment:
+  enabled: true
+  replicas: 1
+  image:
+    repository: ghcr.io/thekoma/hdhomerunepgxml
+    tag: latest
+    pullPolicy: Always
+
+  ports:
+    - name: http
+      containerPort: 8000
+      protocol: TCP
+
+  # Persistence for SQLite cache
+  volumes:
+    data:
+      emptyDir: {} # Override with pvc in production if needed, or use persistence section
+  
+  volumeMounts:
+    data:
+      mountPath: /data
+
+  env:
+    HDHOMERUN_HOST:
+      value: "10.0.1.2" # Change this
+    HDHOMERUN_CACHE_DB_PATH:
+      value: "/data/epg_cache.db"
+    HDHOMERUN_CACHE_ENABLED:
+      value: "true"
+    HDHOMERUN_DEBUG_MODE:
+      value: "off"
+
+service:
+  enabled: true
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+
+ingress:
+  enabled: false
+  # Enable and configure in production
+  # ingressClassName: nginx
+  # hosts:
+  #   - host: epg.local
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix

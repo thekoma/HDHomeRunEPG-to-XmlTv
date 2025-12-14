@@ -12,6 +12,8 @@
 !binaries/*.exe
 !Dockerfile
 !*.yml
+!*.yaml
+!deploy/
 !.github/
 
 build/

@@ -1,0 +1,47 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: hdhomerun-epg
+  namespace: media
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: application
+      version: "1.0.x"
+      sourceRef:
+        kind: HelmRepository
+        name: stakater
+        namespace: flux-system
+      interval: 1m
+  values:
+    applicationName: hdhomerun-epg
+    deployment:
+      enabled: true
+      replicas: 1
+      image:
+        repository: ghcr.io/thekoma/hdhomerunepgxml
+        tag: latest
+        pullPolicy: Always
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      volumes:
+        data:
+          emptyDir: {}
+      volumeMounts:
+        data:
+          mountPath: /data
+      env:
+        HDHOMERUN_HOST:
+          value: "10.0.1.2"
+        HDHOMERUN_CACHE_DB_PATH:
+          value: "/data/epg_cache.db"
+    service:
+      enabled: true
+      ports:
+        - name: http
+          port: 80
+          targetPort: 8000
+          protocol: TCP
