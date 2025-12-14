@@ -69,6 +69,7 @@ jobs:
 
       - name: Analyze with Gemini
         if: env.HAS_DIFF == 'true'
+        continue-on-error: true
         uses: google-github-actions/run-gemini-cli@v0.1.16
         id: gemini
         with:
@@ -89,8 +90,9 @@ jobs:
           TAG="${{ steps.version.outputs.new_tag }}"
           NOTES=""
           
-          if [ "${{ env.HAS_DIFF }}" == "true" ]; then
-            NOTES="${{ steps.gemini.outputs.output }}"
+          if [ "${{ env.HAS_DIFF }}" == "true" ] && [ "${{ steps.gemini.outcome }}" == "success" ]; then
+            NOTES="## AI Summary 🤖
+            ${{ steps.gemini.outputs.output }}"
           fi
           
           echo "Creating release $TAG..."
@@ -98,9 +100,7 @@ jobs:
           # Create release. Pass Gemini notes as description, let GitHub append auto-generated PR list
           gh release create "$TAG" \
             --title "Release $TAG" \
-            --notes "## AI Summary 🤖
-            $NOTES
-            " \
+            --notes "$NOTES" \
             --generate-notes \
             --target "main"
 
