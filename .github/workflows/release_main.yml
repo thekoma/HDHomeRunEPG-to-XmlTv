@@ -27,8 +27,6 @@ jobs:
           YEAR=$(date +'%Y')
           MONTH=$(date +'%m')
           PREFIX="${YEAR}.${MONTH}"
-          
-          # Find highest existing tag for this month
           LAST_TAG=$(git tag --list "${PREFIX}.*" | sort -V | tail -n 1)
           
           if [ -z "$LAST_TAG" ]; then
@@ -38,21 +36,71 @@ jobs:
             NEXT_COUNTER=$((COUNTER + 1))
             NEW_TAG="${PREFIX}.${NEXT_COUNTER}"
           fi
-          
-          echo "Computed Version: $NEW_TAG"
           echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "Computed Version: $NEW_TAG"
+
+      - name: Generate Code Diff
+        id: diff
+        run: |
+          # Finds the previous tag reachable from HEAD
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Skipping diff analysis."
+            echo "HAS_DIFF=false" >> $GITHUB_ENV
+          else
+            echo "Generating diff between $PREV_TAG and HEAD"
+            # Get diff of relevant files, limit size to avoid token overflow
+            # 2000 lines approx
+            git diff $PREV_TAG HEAD -- 'app/' 'hdhomerun_epg/' '*.py' '*.html' > raw_diff.txt
+            
+            if [ ! -s raw_diff.txt ]; then
+               echo "Diff is empty."
+               echo "HAS_DIFF=false" >> $GITHUB_ENV
+            else
+               # Safe read into ENV variable for multiline strings
+               echo "HAS_DIFF=true" >> $GITHUB_ENV
+               echo "DIFF_CONTENT<<EOF" >> $GITHUB_ENV
+               # Head 2000 lines to be safe
+               head -n 2000 raw_diff.txt >> $GITHUB_ENV
+               echo "EOF" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Analyze with Gemini
+        if: env.HAS_DIFF == 'true'
+        uses: google-github-actions/run-gemini-cli@v0.1.16
+        id: gemini
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: |
+            You are a Technical Release Manager. 
+            Analyze the following code changes and write a bullet-point summary of the technical changes for the Changelog.
+            Focus on feature additions, bug fixes, and architectural changes. 
+            Keep it concise and professional.
+            
+            Code Diff:
+            ${{ env.DIFF_CONTENT }}
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.version.outputs.new_tag }}"
-          echo "Creating release for $TAG with auto-generated notes..."
+          NOTES=""
           
-          # Create release using GitHub CLI
-          # --generate-notes automatically creates the changelog from PRs
+          if [ "${{ env.HAS_DIFF }}" == "true" ]; then
+            NOTES="${{ steps.gemini.outputs.output }}"
+          fi
+          
+          echo "Creating release $TAG..."
+          
+          # Create release. Pass Gemini notes as description, let GitHub append auto-generated PR list
           gh release create "$TAG" \
             --title "Release $TAG" \
+            --notes "## AI Summary 🤖
+            $NOTES
+            " \
             --generate-notes \
             --target "main"
 
