@@ -1,10 +1,10 @@
-import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from app.main import app
 from hdhomerun_epg.config import settings
 
 client = TestClient(app)
+
 
 def test_delete_cache(monkeypatch, temp_db_path):
     monkeypatch.setattr(settings, "cache_db_path", temp_db_path)
@@ -12,6 +12,7 @@ def test_delete_cache(monkeypatch, temp_db_path):
     response = client.delete("/cache")
     assert response.status_code == 200
     assert response.json() == {"status": "success", "message": "Cache cleared"}
+
 
 def test_get_epg_error_handling(monkeypatch):
     """Test that failed client fetch returns 500"""
@@ -21,22 +22,26 @@ def test_get_epg_error_handling(monkeypatch):
         assert response.status_code == 500
         assert "Error generating EPG" in response.text
 
+
 def test_cache_status_endpoint(monkeypatch, temp_db_path):
     monkeypatch.setattr(settings, "cache_db_path", temp_db_path)
     response = client.get("/cache")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
+
 def test_healthcheck():
     response = client.get("/healthcheck")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
 
 def test_root_dashboard():
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "HDHomeRun EPG Status" in response.text
+
 
 def test_root_json_status(monkeypatch, temp_db_path):
     monkeypatch.setattr(settings, "cache_db_path", temp_db_path)
@@ -45,22 +50,29 @@ def test_root_json_status(monkeypatch, temp_db_path):
     assert response.json()["status"] == "online"
     assert "cache_entries" in response.json()
 
+
 def test_tv_guide_endpoint(monkeypatch):
     # Mock client.fetch_epg_data to avoid API calls and speed up test
     from hdhomerun_epg import client as lib_client
-    
+
     def mock_fetch(self, days=1, hours=4):
         import time
+
         now = int(time.time())
         return {
             "channels": [{"GuideNumber": "1", "GuideName": "TEST", "ImageURL": ""}],
             "programmes": [
-                {"GuideNumber": "1", "StartTime": now + 60, "EndTime": now + 3660, "Title": "Test Prog"}
-            ]
+                {
+                    "GuideNumber": "1",
+                    "StartTime": now + 60,
+                    "EndTime": now + 3660,
+                    "Title": "Test Prog",
+                }
+            ],
         }
-    
+
     monkeypatch.setattr(lib_client.HDHomeRunClient, "fetch_epg_data", mock_fetch)
-    
+
     response = client.get("/guide")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]

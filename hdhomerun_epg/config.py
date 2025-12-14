@@ -1,5 +1,5 @@
-import os
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     host: str = "hdhomerun.local"
@@ -14,5 +14,6 @@ class Settings(BaseSettings):
     class Config:
         env_prefix = "HDHOMERUN_"
         env_file = ".env"
+
 
 settings = Settings()

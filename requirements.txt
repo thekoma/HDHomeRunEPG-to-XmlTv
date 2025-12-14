@@ -8,3 +8,4 @@ uvicorn
 pytest
 httpx
 jinja2
+pre-commit
