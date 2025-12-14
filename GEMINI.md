@@ -35,6 +35,8 @@ Recently refactored from a single script to a modular modern web application.
     ```powershell
     uvicorn app.main:app --host 0.0.0.0 --reload
     ```
+    > **Note**: Always use `.\venv` as your local environment.
+
 2.  **Run Tests**:
     ```powershell
     pytest -v

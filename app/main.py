@@ -70,7 +70,7 @@ def tv_guide(request: Request):
     logger.info("📺 Rendering TV Guide")
     try:
         # Fetch EPG Data (uses Cache + API)
-        client = HDHomeRunClient(host=settings.hdhomerun_host)
+        client = HDHomeRunClient(host=settings.host)
         # Fetch only a small window for the guide view (e.g. 24 hours) to be fast
         epg_data = client.fetch_epg_data(days=1, hours=4)
         
@@ -142,7 +142,7 @@ def get_epg(background_tasks: BackgroundTasks):
     
     try:
         # Initialize Client
-        client = HDHomeRunClient(host=settings.hdhomerun_host)
+        client = HDHomeRunClient(host=settings.host)
         
         # Fetch Data
         epg_data = client.fetch_epg_data(
