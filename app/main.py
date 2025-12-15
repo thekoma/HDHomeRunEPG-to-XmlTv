@@ -69,7 +69,22 @@ def read_root(request: Request):
             )
 
     # Default to Dashboard
-    return templates.TemplateResponse(request=request, name="dashboard.html")
+    config_items = []
+    for field_name, field_info in settings.model_fields.items():
+        value = getattr(settings, field_name)
+        default = field_info.default
+        is_default = value == default
+        config_items.append({
+            "name": field_name,
+            "value": value,
+            "is_default": is_default
+        })
+
+    return templates.TemplateResponse(
+        request=request, 
+        name="dashboard.html", 
+        context={"config_items": config_items}
+    )
 
 
 @app.get("/guide", response_class=HTMLResponse)
@@ -100,7 +115,9 @@ def tv_guide(request: Request):
 
         grouped_programmes = defaultdict(list)
         for p in programmes:
-            # Pre-calculate strings for template
+            # Pre-calculate strings for template - DEFAULT to server time, will be overridden by JS
+            p["start_ts"] = p["StartTime"]
+            p["end_ts"] = p["EndTime"]
             p["start_str"] = datetime.datetime.fromtimestamp(p["StartTime"]).strftime(
                 "%H:%M"
             )
@@ -108,21 +125,25 @@ def tv_guide(request: Request):
                 "%H:%M"
             )
 
+            # --- Visual Width Calculation ---
+            # For programs currently playing, we only want to show the REMAINING portion
+            # starting from the left edge (Now).
+            visual_start = max(p["StartTime"], now)
+            visual_duration_seconds = p["EndTime"] - visual_start
+            
             # Width calculation
-            duration_seconds = p["EndTime"] - p["StartTime"]
-            duration_minutes = duration_seconds / 60
-            p["width_px"] = max(
-                int(duration_minutes * pixels_per_minute), 60
-            )  # Min width 60px
+            visual_duration_minutes = visual_duration_seconds / 60
+            p["width_px"] = int(visual_duration_minutes * pixels_per_minute)
 
-            # Progress calculation
+            # Progress calculation (still based on total duration)
+            total_duration = p["EndTime"] - p["StartTime"]
             if now < p["StartTime"]:
                 p["progress_percent"] = 0
             elif now > p["EndTime"]:
                 p["progress_percent"] = 100
             else:
                 p["progress_percent"] = int(
-                    ((now - p["StartTime"]) / duration_seconds) * 100
+                    ((now - p["StartTime"]) / total_duration) * 100
                 )
 
             grouped_programmes[p["GuideNumber"]].append(p)
