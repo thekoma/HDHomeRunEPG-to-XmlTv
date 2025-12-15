@@ -96,8 +96,8 @@ def tv_guide(request: Request):
     try:
         # Fetch EPG Data (uses Cache + API)
         client = HDHomeRunClient(host=settings.host)
-        # Fetch only a small window for the guide view (e.g. 24 hours) to be fast
-        epg_data = client.fetch_epg_data(days=1, hours=4)
+        # Fetch EPG days as configured to allow full timeline scrolling
+        epg_data = client.fetch_epg_data(days=settings.epg_days, hours=4)
 
         # Prepare data for template
         channels = epg_data.get("channels", [])
@@ -148,6 +148,53 @@ def tv_guide(request: Request):
 
             grouped_programmes[p["GuideNumber"]].append(p)
 
+        # --- Gap Filling Logic ---
+        # Ensure programs are aligned to the timeline by inserting spacer blocks for gaps.
+        # This fixes the issue where gaps cause subsequent programs to shift left (desync),
+        # leaving the end of the timeline empty.
+        
+        timeline_end_time = now + (settings.epg_days * 24 * 60 * 60)
+        
+        for guide_number, progs in grouped_programmes.items():
+            # Ensure sorted
+            progs.sort(key=lambda x: x["StartTime"])
+            
+            filled_progs = []
+            # Cursor tracks the end of the last added element (starting at Now)
+            cursor = now
+            
+            for p in progs:
+                # Calculate gap from cursor to program start
+                # We only care if program starts after cursor.
+                if p["StartTime"] > cursor:
+                    gap_seconds = p["StartTime"] - cursor
+                    # Only render gap if significant (> 1 minute visual)
+                    if gap_seconds > 0: # render even small gaps to maintain perfect sync
+                        gap_minutes = gap_seconds / 60
+                        gap_px = int(gap_minutes * pixels_per_minute)
+                        if gap_px > 0:
+                            filled_progs.append({
+                                "is_gap": True,
+                                "width_px": gap_px,
+                                "StartTime": cursor,
+                                "EndTime": p["StartTime"],
+                                "title": "No Data" # Helper
+                            })
+                
+                filled_progs.append(p)
+                # update cursor to end of this program
+                cursor = max(cursor, p["EndTime"])
+            
+            # Optional: Fill remainder of timeline
+            # if cursor < timeline_end_time:
+            #     gap_seconds = timeline_end_time - cursor
+            #     gap_minutes = gap_seconds / 60
+            #     gap_px = int(gap_minutes * pixels_per_minute)
+            #     if gap_px > 0:
+            #         filled_progs.append({"is_gap": True, "width_px": gap_px})
+
+            grouped_programmes[guide_number] = filled_progs
+
         # Group everything nicely
         grouped_data = {}
         for ch in channels:
@@ -160,7 +207,11 @@ def tv_guide(request: Request):
         return templates.TemplateResponse(
             request=request,
             name="guide.html",
-            context={"channels": channels, "grouped_data": grouped_data},
+            context={
+                "channels": channels, 
+                "grouped_data": grouped_data,
+                "epg_days": settings.epg_days
+            },
         )
 
     except Exception as e:

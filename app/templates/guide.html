@@ -94,37 +94,46 @@
         </div>
         {% endif %}
 
-        <!-- Timeline Header -->
-        <div
-          class="flex border-b border-slate-700 bg-slate-800 z-20 sticky top-0 shadow-md"
-        >
-          <div
-            class="w-48 shrink-0 border-r border-slate-700 p-2 flex items-center justify-center text-slate-400 text-xs font-mono"
-          >
-            CHANNELS
-          </div>
-          <!-- Timeline Container -->
-          <div
-            class="flex-1 relative h-8 overflow-hidden"
-            id="timeline-container"
-          >
-            <!-- JS will populate markers here -->
-          </div>
+        <!-- Scrubber Area (Fixed above scrollable area) -->
+        <div class="h-[60px] bg-slate-800 relative select-none border-b border-slate-700 z-30 shadow-sm" id="scrubber-track-container">
+             <!-- Track -->
+            <div class="absolute top-1/2 left-4 right-4 h-1.5 bg-slate-700 rounded-full overflow-hidden transform -translate-y-1/2 cursor-crosshair group" id="scrubber-track">
+                <div class="h-full bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-blue-500/50 w-full"></div>
+            </div>
+
+            <!-- Lens Cursor (Absolute) -->
+            <div id="scrubber-lens" class="absolute top-1/2 pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden flex-col items-center gap-1 z-30">
+                <div class="w-auto px-3 min-w-[64px] h-8 bg-blue-500/90 backdrop-blur-md rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-blue-400/50 flex items-center justify-center whitespace-nowrap">
+                     <span class="text-white font-bold font-mono text-xs" id="lens-time">--:--</span>
+                </div>
+                <div class="w-0.5 h-8 bg-blue-400/80 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+            </div>
+            
+            <!-- Active Window Indicator -->
+             <div id="scrubber-window" class="absolute top-1/2 h-3 bg-white/20 rounded-full transform -translate-y-1/2 pointer-events-none border border-white/30 backdrop-blur-[1px]" style="left: 0; width: 50px;"></div>
         </div>
 
         <!-- Scrollable Area -->
-        <div
-          class="overflow-auto custom-scrollbar flex-1 relative"
-          id="guide-container"
-        >
+        <div class="overflow-auto custom-scrollbar flex-1 relative" id="guide-container">
+            
+            <!-- Timeline Header Row (Sticky Top) -->
+            <div class="flex border-b border-slate-700 bg-slate-800 z-40 sticky top-0 min-w-max">
+                <div class="w-48 shrink-0 border-r border-slate-700 p-2 flex items-center justify-center text-slate-400 text-xs font-mono bg-slate-800 sticky left-0 z-50 shadow-[4px_0_10px_rgba(0,0,0,0.3)]">
+                    CHANNELS
+                </div>
+                <!-- Timeline Container -->
+                <div class="flex-1 relative h-8 overflow-hidden bg-slate-800" id="timeline-container">
+                    <!-- JS will populate markers here -->
+                </div>
+            </div>
           {% for channel_id, data in grouped_data.items() %}
           <div
-            class="flex border-b border-slate-700 group/channel channel-row"
+            class="flex border-b border-slate-700 group/channel channel-row min-w-max"
             data-channel-name="{{ data.channel.GuideName|lower }}"
           >
             <!-- Left: Channel Header (Sticky) -->
             <div
-              class="w-48 shrink-0 bg-slate-800 p-3 border-r border-slate-700 sticky left-0 z-20 flex items-center shadow-lg"
+              class="w-48 shrink-0 bg-slate-800 p-3 border-r border-slate-700 sticky left-0 z-30 flex items-center shadow-[4px_0_10px_rgba(0,0,0,0.3)]"
             >
               {% if data.channel.ImageURL %}
               <img
@@ -153,6 +162,16 @@
               {% if not data.programmes %}
               <div class="text-slate-500 italic p-2 text-xs">No info</div>
               {% else %} {% for prog in data.programmes %}
+              {% if prog.is_gap %}
+                <!-- GAP / Spacer -->
+                <div class="flex-shrink-0 h-16 bg-[length:10px_10px] bg-repeat" 
+                     style="width: {{ prog.width_px }}px; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.03) 4px, rgba(255,255,255,0.03) 8px);">
+                     <!-- Optional: label for large gaps -->
+                     {% if prog.width_px > 100 %}
+                      <div class="h-full flex items-center justify-center text-xs text-slate-700 font-mono rotate-0 select-none">NO DATA</div>
+                     {% endif %}
+                </div>
+              {% else %}
               <!-- Program Card -->
               <div
                 class="flex-none bg-slate-700/80 hover:bg-blue-600/80 rounded border border-slate-600 hover:border-blue-400 transition-all cursor-pointer relative overflow-hidden group/card mr-1 h-16 program-card"
@@ -193,6 +212,7 @@
                   </div>
                 </div>
               </div>
+              {% endif %}
               {% endfor %} {% endif %}
             </div>
           </div>
@@ -312,27 +332,31 @@
         const pixelsPerMinute = 5;
 
         // Determine next 30-minute intervals
-        // We want to render markers for the next 4 hours
-        // Start from the previous :00 or :30 to catch one that might be just off-screen or partial
         let start = new Date(now);
         start.setSeconds(0);
         start.setMilliseconds(0);
-
-        // Round down to nearest 30
         const minutes = start.getMinutes();
         if (minutes >= 30) start.setMinutes(30);
         else start.setMinutes(0);
 
-        let timeIterator = new Date(start);
-        const endTime = new Date(start.getTime() + 4 * 60 * 60 * 1000); // +4 hours
+        let timeIterator = new Date(start); 
+
+        // Use server-provided config or fallback to 15
+        const daysToRender = {{ epg_days | tojson | default(15) }};
+        // Add a small buffer (4 hours) to ensure we cover the last program fully
+        const bufferHours = 4;
+        const endTime = new Date(now.getTime() + (daysToRender * 24 * 60 * 60 * 1000) + (bufferHours * 60 * 60 * 1000));
+
+        // SYNC HEADER WIDTH
+        // Calculate expected width: (Days * Mins/Day * Pixels/Min) + Buffer
+        const totalMinutes = (daysToRender * 24 * 60) + (bufferHours * 60);
+        const headerWidth = totalMinutes * pixelsPerMinute;
+        container.style.minWidth = `${headerWidth}px`;
 
         while (timeIterator < endTime) {
           const diffSeconds = timeIterator.getTime() / 1000 - currentUnix;
 
-          // If diff is negative, it means it's in the past (to the left of "Now" line)
-          // We only render if it's visible or nearly visible.
-          // Since "Now" is always left=0, negative diffs are hidden unless we add padding.
-          // But for this implementation, let's just render if > -30 mins
+          // Render visible markers (allow some negative for safety)
           if (diffSeconds > -1800) {
             const leftPos = (diffSeconds / 60) * pixelsPerMinute;
 
@@ -365,11 +389,121 @@
         updateClock();
         setInterval(updateClock, 1000);
         renderLocalTimes();
+        
+        // Initial Render
         renderTimeline();
-
-        // Re-render timeline every minute to keep alignment correct relative to "Now"
+        
+        // Re-render timeline every minute
         setInterval(renderTimeline, 60000);
+
+        initScrubber();
       });
+
+      // --- Scrubber Logic ---
+      function initScrubber() {
+          const trackContainer = document.getElementById('scrubber-track-container');
+          const guideContainer = document.getElementById('guide-container');
+          const windowIndicator = document.getElementById('scrubber-window');
+          const lens = document.getElementById('scrubber-lens');
+          const lensTime = document.getElementById('lens-time');
+
+          let isDragging = false;
+
+          // Sync Active Window Indicator to Guide Scroll
+          guideContainer.addEventListener('scroll', () => {
+              updateScrubberWindow();
+          });
+
+          // Click / Drag on Track
+          trackContainer.addEventListener('mousedown', (e) => {
+              isDragging = true;
+              scrollToScrubberPos(e.clientX);
+          });
+          document.addEventListener('mousemove', (e) => {
+              if(isDragging) {
+                  e.preventDefault();
+                  scrollToScrubberPos(e.clientX);
+              }
+              // Update Lens if hovering track container
+              const rect = trackContainer.getBoundingClientRect();
+              if(e.clientY >= rect.top && e.clientY <= rect.bottom && e.clientX >= rect.left && e.clientX <= rect.right) {
+                  updateLens(e.clientX);
+                  lens.classList.remove('hidden');
+                  // lens.classList.add('flex'); // It's flex by default but hidden toggle
+                  lens.style.display = 'flex';
+              } else {
+                  lens.classList.add('hidden');
+                  lens.style.display = 'none';
+              }
+          });
+          document.addEventListener('mouseup', () => {
+              isDragging = false;
+          });
+
+          function updateScrubberWindow() {
+               // Calculate ratio
+               const totalWidth = guideContainer.scrollWidth;
+               const visibleWidth = guideContainer.clientWidth;
+               const scrollLeft = guideContainer.scrollLeft;
+
+               const trackWidth = trackContainer.clientWidth - 32; // -32 for left/right padding
+               const ratio = trackWidth / totalWidth;
+
+               const indicatorWidth = Math.max(visibleWidth * ratio, 20); // Min width
+               const indicatorLeft = 16 + (scrollLeft * ratio); // +16 padding
+
+               windowIndicator.style.width = `${indicatorWidth}px`;
+               windowIndicator.style.left = `${indicatorLeft}px`;
+          }
+          
+          function scrollToScrubberPos(clientX) {
+               const rect = trackContainer.getBoundingClientRect();
+               const trackLeft = rect.left + 16;
+               const trackWidth = rect.width - 32;
+               
+               let relX = clientX - trackLeft;
+               // Clamp
+               if (relX < 0) relX = 0;
+               if (relX > trackWidth) relX = trackWidth;
+
+               // Convert to scroll position
+               const ratio = relX / trackWidth;
+               const totalScrollWidth = guideContainer.scrollWidth - guideContainer.clientWidth;
+               
+               guideContainer.scrollLeft = totalScrollWidth * ratio;
+          }
+
+          function updateLens(clientX) {
+               const rect = trackContainer.getBoundingClientRect();
+               lens.style.left = `${clientX - rect.left}px`;
+               
+               // Calculate time at this position
+               const trackLeft = rect.left + 16;
+               const trackWidth = rect.width - 32;
+               let ratio = (clientX - trackLeft) / trackWidth;
+               if(ratio < 0) ratio = 0;
+               if(ratio > 1) ratio = 1;
+
+               // Total duration in seconds (based on guide content)
+               // We need a rough estimate. Let's look at the first channel's last program end time vs "now"
+               // Or simpler: The guide is rendered based on pixel width.
+               const pixelsPerMinute = 5;
+               const totalWidth = guideContainer.scrollWidth;
+               const totalMinutes = totalWidth / pixelsPerMinute;
+               
+               const now = new Date();
+               const targetTime = new Date(now.getTime() + (totalMinutes * ratio * 60 * 1000));
+               
+               // Format: "Day HH:MM"
+               const day = targetTime.toLocaleDateString([], {weekday: 'short'});
+               const time = targetTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+               
+               lensTime.innerText = `${day} ${time}`;
+          }
+
+          // Initial call
+          setTimeout(updateScrubberWindow, 100); // Wait for layout
+      }
 
       function filterGuide() {
         const chFilter = document
