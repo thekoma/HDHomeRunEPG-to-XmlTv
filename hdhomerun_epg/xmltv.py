@@ -83,10 +83,7 @@ class XMLTVGenerator:
             if "EpisodeNumber" in programme_data:
                 self._add_episode_num(programme, programme_data["EpisodeNumber"])
 
-            self._add_previously_shown(programme, programme_data, start_time)
-
-            if programme_data.get("First") is True:
-                ET.SubElement(programme, "new")
+            self._handle_new_or_previously_shown(programme, programme_data)
 
         except Exception as e:
             logger.error(
@@ -111,23 +108,36 @@ class XMLTVGenerator:
         except (ValueError, IndexError):
             pass
 
-    def _add_previously_shown(
-        self, programme: ET.Element, data: Dict[str, Any], start_time: datetime.datetime
+    def _handle_new_or_previously_shown(
+        self, programme: ET.Element, data: Dict[str, Any]
     ) -> None:
+        """
+        Determine if programme is <new /> or <previously-shown /> based on OriginalAirdate.
+        Logic ported from upstream: Check if OriginalAirdate is >= Yesterday (UTC).
+        """
         if "OriginalAirdate" in data:
-            air_date = datetime.datetime.fromtimestamp(
+            air_date_utc = datetime.datetime.fromtimestamp(
                 data["OriginalAirdate"], tz=pytz.UTC
-            ).astimezone(LOCAL_TZ)
-            start_date_only = start_time.replace(
-                hour=0, minute=0, second=0, microsecond=0
             )
 
-            if air_date != start_date_only:
-                ET.SubElement(programme, "previously-shown").set(
-                    "start", air_date.strftime("%Y%m%d%H%M%S")
-                )
-            elif data.get("First") is not True:
-                ET.SubElement(programme, "previously-shown")
+            # Upstream logic: compare with yesterday's date
+            yesterday_utc = (
+                datetime.datetime.now(pytz.UTC) - datetime.timedelta(days=1)
+            ).date()
+
+            if air_date_utc.date() >= yesterday_utc:
+                ET.SubElement(programme, "new")
+            else:
+                # Not new, so it's previously shown
+                # Format date for attribute (using local tz for display consistency or UTC)
+                # Upstream uses: airDate.strftime("%Y%m%d%H%M%S") (without offset)
+                # We will preserve the offset if possible or match upstream simplicity
+                # Let's use the local representation for the XML attribute
+                start_str = air_date_utc.astimezone(LOCAL_TZ).strftime("%Y%m%d%H%M%S")
+                ET.SubElement(programme, "previously-shown").set("start", start_str)
+        else:
+            # No OriginalAirdate implies it's old (upstream logic)
+            ET.SubElement(programme, "previously-shown")
 
     def generate(self, epg_data: Dict[str, Any]) -> str:
         """Generate XML content and return as string."""
