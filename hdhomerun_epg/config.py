@@ -1,7 +1,9 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="HDHOMERUN_", env_file=".env")
+
     host: str = "hdhomerun.local"
     epg_days: int = 4
     epg_hours: int = 2
@@ -10,10 +12,6 @@ class Settings(BaseSettings):
     cache_db_path: str = "epg_cache.db"
     cache_ttl_seconds: int = 86400  # 24 Hours
     cache_enabled: bool = True
-
-    class Config:
-        env_prefix = "HDHOMERUN_"
-        env_file = ".env"
 
 
 settings = Settings()
