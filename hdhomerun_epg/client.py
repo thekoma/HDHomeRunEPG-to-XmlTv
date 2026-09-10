@@ -1,14 +1,10 @@
 import datetime
 import logging
 import requests
-import urllib3
 import pytz
 from typing import List, Dict, Optional, Any
 from .config import settings
 from .cache import CacheManager
-
-# Suppress only the single warning from urllib3 needed.
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +25,7 @@ class HDHomeRunClient:
 
             if "DeviceAuth" in data:
                 self.device_auth = data["DeviceAuth"]
-                logger.info(f"🔑 Discovered device auth: {self.device_auth}")
+                logger.info("🔑 HDHomeRun device discovered")
                 return self.device_auth
 
             for key in data:  # Fallback if structure is different
@@ -47,7 +43,7 @@ class HDHomeRunClient:
         if not self.device_auth:
             self.discover_device_auth()
 
-        logger.info(f"📺 Fetching HDHomeRun Web API Lineup for auth {self.device_auth}")
+        logger.info("📺 Fetching HDHomeRun lineup")
         url = f"http://{self.host}/lineup.json"
         try:
             response = requests.get(url, timeout=10)
@@ -58,7 +54,7 @@ class HDHomeRunClient:
             raise
 
     def fetch_epg_data(self, days: int, hours: int) -> Dict[str, Any]:
-        """Fetch EPG data for a specific channel via POST to HDHomeRun API."""
+        """Fetch guide data for all tuned channels."""
         if not self.device_auth:
             self.discover_device_auth()
 
@@ -70,6 +66,7 @@ class HDHomeRunClient:
             logger.info("⚠️ Caching is DISABLED via configuration.")
 
         epg_data = {"channels": [], "programmes": []}
+        seen_programmes = set()
 
         url = f"https://api.hdhomerun.com/api/guide.php?DeviceAuth={self.device_auth}"
 
@@ -85,13 +82,7 @@ class HDHomeRunClient:
             aligned_timestamp, tz=pytz.UTC
         )
 
-        # Log device auth used (partially masked for security)
-        masked_auth = (
-            self.device_auth[:4] + "***" + self.device_auth[-4:]
-            if self.device_auth and len(self.device_auth) > 8
-            else "***"
-        )
-        logger.info(f"🚀 Fetching EPG using DeviceAuth: {masked_auth}")
+        logger.info("🚀 Fetching guide data")
         # End with the desired number of days
         end_time = next_start_date + datetime.timedelta(days=days)
 
@@ -123,10 +114,7 @@ class HDHomeRunClient:
                         )
 
                     try:
-                        # Legacy script used ssl._create_unverified_context(), so we disable verification to match behavior.
-                        # Also HDHomeRun API seems to be picky about User-Agent or SSL specifics sometimes?
-                        # We will try to mimic a standard request but disabling verification is key if they use legacy certs.
-                        response = session.get(fetch_url, timeout=30, verify=False)
+                        response = session.get(fetch_url, timeout=30, verify=True)
                         response.raise_for_status()
                         epg_segment = response.json()
 
@@ -142,12 +130,11 @@ class HDHomeRunClient:
                             )
 
                     except requests.RequestException as e:
-                        logger.error(f"🚨 Request failed for {fetch_url}: {e}")
-                        if hasattr(e, "response") and e.response is not None:
-                            logger.error(f"🚨 Response Body: {e.response.text}")
-                        # Skip this segment or break? Original continued?
-                        # Original raised generic Exception caught outside.
-                        raise e
+                        logger.error(
+                            f"🚨 Guide provider request failed: {type(e).__name__}"
+                        )
+                        # The upstream exception contains the DeviceAuth URL.
+                        raise RuntimeError("Guide provider request failed") from None
                 else:
                     logger.info(
                         f"✅ Cache hit for {next_start_date} (Key: {url_start_date})."
@@ -195,18 +182,14 @@ class HDHomeRunClient:
                         epg_data["channels"].append(channel_info)
 
                     for programme in programmes_list:
-                        # Check duplicate
-                        # Optimized check using a set of signatures could be better but sticking to logic
-                        is_duplicate = any(
-                            epg["StartTime"] == programme["StartTime"]
-                            and epg["Title"] == programme["Title"]
-                            and epg.get("GuideNumber")
-                            == channel_epg_segment["GuideNumber"]
-                            for epg in epg_data["programmes"]
+                        signature = (
+                            programme["StartTime"],
+                            programme["Title"],
+                            channel_epg_segment["GuideNumber"],
                         )
-
-                        if is_duplicate:
+                        if signature in seen_programmes:
                             continue
+                        seen_programmes.add(signature)
 
                         programme["GuideNumber"] = channel_epg_segment["GuideNumber"]
                         epg_data["programmes"].append(programme)
@@ -215,6 +198,7 @@ class HDHomeRunClient:
 
         except Exception as e:
             logger.error(f"Error fetching EPG: {e}")
-            # Return what we have
+            # A failed fetch must not replace the last good guide with partial XML.
+            raise RuntimeError("Guide data is temporarily unavailable") from None
 
         return epg_data

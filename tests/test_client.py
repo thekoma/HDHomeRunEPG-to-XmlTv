@@ -1,4 +1,5 @@
 import pytest
+import requests
 from unittest.mock import MagicMock, patch
 from hdhomerun_epg.client import HDHomeRunClient
 
@@ -80,3 +81,79 @@ def test_fetch_epg_integration_logic(temp_db_path, monkeypatch):
 
     # Real integration tests are harder without extensive mocking of time
     # But basic structure is tested via mocks above
+
+
+@pytest.fixture
+def guide_client(monkeypatch, mock_discovery_response):
+    from hdhomerun_epg.config import settings
+
+    monkeypatch.setattr(settings, "cache_enabled", False)
+    client = HDHomeRunClient("1.2.3.4")
+    client.device_auth = mock_discovery_response["DeviceAuth"]
+    client.fetch_channels = MagicMock(
+        return_value=[{"GuideNumber": "5.1"}, {"GuideNumber": "6.1"}]
+    )
+    return client
+
+
+def test_fetch_epg_deduplication(guide_client):
+    programme = {"StartTime": 100, "EndTime": 200, "Title": "Test Show"}
+    with patch("requests.Session") as mock_session_cls:
+        mock_session = mock_session_cls.return_value
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {
+                "GuideNumber": "5.1",
+                "Guide": [programme.copy(), dict(programme, StartTime=300)],
+            },
+            {"GuideNumber": "6.1", "Guide": [programme.copy()]},
+        ]
+        mock_session.get.return_value = mock_response
+        result = guide_client.fetch_epg_data(days=1, hours=12)
+        assert len(result["programmes"]) == 3
+        assert mock_session.get.call_count == 2
+        for call in mock_session.get.call_args_list:
+            assert call.kwargs["verify"] is True
+            assert call.kwargs["timeout"] == 30
+
+
+@pytest.mark.parametrize(
+    "error", [requests.Timeout, requests.HTTPError, requests.exceptions.SSLError]
+)
+def test_fetch_epg_request_error(guide_client, caplog, error):
+    import traceback
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {"GuideNumber": "5.1", "Guide": [{"StartTime": 100, "Title": "Test Show"}]}
+    ]
+    with patch("requests.Session") as mock_session_cls:
+        mock_session = mock_session_cls.return_value
+        mock_session.get.side_effect = [
+            mock_response,
+            error("https://provider.test/?DeviceAuth=" + guide_client.device_auth),
+        ]
+        with pytest.raises(RuntimeError, match="temporarily unavailable") as raised:
+            guide_client.fetch_epg_data(days=1, hours=12)
+    assert error.__name__ in caplog.text
+    assert guide_client.device_auth not in "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert guide_client.device_auth not in caplog.text
+    assert guide_client.device_auth not in str(raised.value)
+
+
+def test_device_auth_logging(caplog, mock_discovery_response, mock_lineup_response):
+    import logging
+
+    caplog.set_level(logging.INFO, logger="hdhomerun_epg")
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.json.side_effect = [
+            mock_discovery_response,
+            mock_lineup_response,
+        ]
+        client = HDHomeRunClient("1.2.3.4")
+        client.fetch_channels()
+    assert mock_discovery_response["DeviceAuth"] not in caplog.text

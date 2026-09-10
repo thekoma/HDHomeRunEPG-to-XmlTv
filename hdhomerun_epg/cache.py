@@ -28,6 +28,10 @@ class CacheManager:
                 conn.execute(
                     "CREATE INDEX IF NOT EXISTS idx_end_time ON epg_chunks (end_time)"
                 )
+                conn.execute(
+                    "DELETE FROM epg_chunks WHERE end_time < ?",
+                    (int(time.time()) - 86400,),
+                )
         except Exception as e:
             logger.error(f"🚨 Failed to initialize cache DB: {e}")
 
