@@ -29,17 +29,17 @@ A small service that runs next to the tuner on the LAN, uses the device's own gu
 
 - Media servers (Jellyfin, Plex, Emby) fetch `/epg.xml` on their own schedule.
 - Source data: the tuner on the LAN (`discover.json`, `lineup.json`) and SiliconDust's cloud guide (`api.hdhomerun.com/api/guide.php`, authenticated by the rotating `DeviceAuth`).
-- Guide horizon, verified on the reference device on 2026-11-04: `guide.php` answers HTTP 400 for any `Start` more than 48 hours ahead, and each call returns about 7 hours of programmes. SiliconDust documents 3 days of guide data for free and 14 days with a DVR subscription.
+- Guide horizon, verified on the reference device on 2026-11-04: `guide.php` answers HTTP 400 for any `Start` more than 48 hours ahead, and each call returns exactly 4 hours of programmes for every channel. SiliconDust documents 3 days of guide data for free and 14 days with a DVR subscription.
 - SiliconDust also publishes an official XMLTV feed (`api.hdhomerun.com/api/xmltv`). On the reference device, matched programme by programme, it is markedly richer than `guide.php`: descriptions on 95% of programmes instead of 54%, categories on every programme instead of 55%, plus `dd_progid`, video quality and live flags that `guide.php` lacks. It repeats one channel id across several channel numbers, so it is not valid XMLTV as served.
 - Reference device: HDHomeRun CONNECT QUATRO (HDHR5-4DT, DVB-T, Italy). It has 317 channels in the lineup, 162 of them with guide data, and logos for 134 of those. Content is mostly Italian.
-- Deployment: Docker image on GHCR, plus Helm, ArgoCD and Flux manifests in `deploy/`.
+- Deployment: Docker image on GHCR, plus Helm, Argo CD and Flux examples for the bjw-s app-template chart in `deploy/`.
 
 ## Capabilities and Constraints
 
 - Endpoints: `/` (dashboard in HTML, status in JSON), `/guide`, `/epg.xml`, `/healthcheck`, `GET` and `DELETE /cache`, `/docs`.
 - Configuration through `HDHOMERUN_*` environment variables.
 - Guide data per programme: title, episode title and number, synopsis, start and end, original air date, image, poster, series ID, "first airing" flag, genre filter, and teams for sports. Per channel: number, name, affiliate, logo.
-- Open decision: whether `/epg.xml` should be built from the official XMLTV feed, from `guide.php`, or from both merged.
+- `/epg.xml` merges both sources: `guide.php` gives the schedule and the channel ids, and the official XMLTV feed fills in the details `guide.php` lacks, matched by channel number and start time.
 
 ## Brand Commitments
 
@@ -51,7 +51,7 @@ A small service that runs next to the tuner on the LAN, uses the device's own gu
 ## Evidence on Hand
 
 - A live tuner on the LAN provides real guide data for design and testing.
-- `images/` holds screenshots of the previous interface.
+- `images/` holds screenshots of the current guide and status page, taken with real tuner data.
 - There are no testimonials, user counts or benchmarks; never invent them.
 
 ## Product Principles

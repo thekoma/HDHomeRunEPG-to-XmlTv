@@ -1,128 +1,125 @@
-# HDHomeRun EPG to XMLTV
+# HDHomeRun EPG
 
-![CI Status](https://img.shields.io/github/actions/workflow/status/thekoma/HDHomeRunEPG-to-XmlTv/ci.yml?branch=main&style=flat-square&label=CI)
-![GitHub Release](https://img.shields.io/github/v/release/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square&label=Release)
-![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fthekoma%2Fhdhomerunepgxml-blue?style=flat-square&logo=docker&logoColor=white)
-![Python Version](https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square&logo=python&logoColor=white)
-![License](https://img.shields.io/github/license/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square)
-![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)
+[![Tests](https://img.shields.io/github/actions/workflow/status/thekoma/HDHomeRunEPG-to-XmlTv/test.yml?branch=main&style=flat-square&label=tests)](https://github.com/thekoma/HDHomeRunEPG-to-XmlTv/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square&label=release)](https://github.com/thekoma/HDHomeRunEPG-to-XmlTv/releases/latest)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square)](requirements.txt)
+[![License](https://img.shields.io/github/license/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square)](LICENSE)
 
-Refactored Python library and FastAPI service to fetch EPG from HDHomeRun devices and serve it as XMLTV.
+HDHomeRun EPG runs next to an HDHomeRun tuner on your network. It turns the tuner's guide data into an XMLTV file for Jellyfin, Plex or Emby, and it serves a TV guide that you can browse from a phone, a laptop or the TV's own browser.
 
-## ✨ Features
+![The TV guide in a desktop browser. Channels run down the left, every programme sits on one time scale filled with its genre colour, a white line marks the current time, and the selected film's details are on the right.](images/guide.webp)
 
-**For Media Server Users (Jellyfin, Plex, Emby):**
-*   📺 **Free EPG Data**: Extracts the over-the-air guide data that comes with your TV signal. No paid subscriptions needed!
-*   🔌 **Plug & Play**: Acts as a simple bridge. Point your media server to `http://.../epg.xml` and you're done.
-*   🚀 **Performance**: Caches data locally so your automated guide updates in Jellyfin finish in seconds, not minutes.
-*   👀 **Web Interface**: Includes a beautiful built-in TV Guide to check what's on without opening your media player.
-
-**Technical Highlights:**
-*   🐍 **Modern Stack**: Built with Python 3.9+ and FastAPI.
-*   💾 **Smart Caching**: SQLite-based caching with 24h TTL to minimize calls to the HDHomeRun hardware.
-*   🐳 **Docker First**: Ready-to-use container for easy deployment.
-*   🔍 **Observability**: Prometheus-ready metrics and detailed logs.
-
-## 🔄 How It Works
-
-This service acts as a proxy and translator between your hardware and your media server.
+## How it works
 
 ```mermaid
-graph LR
-    A[HDHomeRun Device] -- "JSON (Slow)" --> B(EPG Service)
-    B <-- "Read/Write" --> C[(SQLite Cache)]
-    B -- "XMLTV (Fast)" --> D[Jellyfin / Plex / Emby]
-    E[User] -- "Web Browser" --> B
-
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#ccf,stroke:#333,stroke-width:1px
+flowchart LR
+  tuner[HDHomeRun tuner] -- "channels, DeviceAuth" --> service[HDHomeRun EPG]
+  cloud[SiliconDust guide service] -- "guide.php, XMLTV feed" --> service
+  service <--> cache[(SQLite cache)]
+  service -- "/epg.xml" --> media[Jellyfin, Plex, Emby]
+  service -- "/guide" --> browser[Browsers and TVs]
 ```
 
-1.  **Discovery**: Finds your HDHomeRun device on the local network.
-2.  **Fetch & Cache**: Downloads the schedule in small chunks and saves it to a local database.
-3.  **Enrich**: Every 20 to 28 hours, as SiliconDust asks, downloads SiliconDust's own XMLTV feed and adds the descriptions, categories, language and programme ids that the schedule lacks. This needs the cache: with `HDHOMERUN_CACHE_ENABLED=False`, programmes keep the schedule's details only.
-4.  **Serve**: Generates a standard `epg.xml` file that any XMLTV-compatible software can ingest.
+The service asks the tuner for its channel list and its `DeviceAuth` key. With that key it downloads the schedule from SiliconDust's guide service (`guide.php`) in 4-hour chunks and keeps each chunk in a SQLite cache for a day. Every 20 to 28 hours, as SiliconDust asks, it also downloads SiliconDust's own XMLTV feed and adds the descriptions, categories, language and programme ids that the schedule leaves out. `/epg.xml` and `/guide` read from the same cache.
 
+Without a DVR subscription, SiliconDust's guide covers about two days ahead. With one it covers more, and `HDHOMERUN_EPG_DAYS` sets how far the service goes.
 
-## 📊 Project Status
+## The TV guide
 
--   **Completed**: Refactoring, Caching, Dashboard, Guide UI, Testing, Docker.
--   **Deployment**: [Deployment Guide](DEPLOY.md) (Helm, ArgoCD, FluxCD).
--   **Next Steps**: Authenticated endpoints (optional), multiple device support (optional).
+Open `http://<host>:8000/guide`. A programme's width is its length and its colour is its genre, so you can read the evening before you read a title. The white line is the current time.
 
+- Pick a genre in the legend to dim everything else.
+- Search by title to jump to the next showing.
+- Move through the days with the buttons in the top bar.
+- On a TV browser the page scales up, and the arrow keys and Enter work like a remote.
 
-## 📸 Screenshots
+![The guide filtered to films. Only the films keep their red fill; every other programme turns grey.](images/filter.webp)
 
-### Dashboard
-![Dashboard](images/dashboard.png)
+On a phone the channel column narrows and a programme's details slide up from the bottom.
 
-### TV Guide
+<p>
+  <img src="images/phone.webp" width="300" alt="The guide on a phone, with the search field under the day buttons and narrow channel plates">
+  <img src="images/phone-detail.webp" width="300" alt="A film's details on a phone: image, time, channel, genre tags and description">
+</p>
 
-![TV Guide Compact](images/guide01.png)
+## The XMLTV feed
 
-![TV Guide](images/guide02.png)
-*(Detailed program view)*
+`http://<host>:8000/epg.xml` is a standard XMLTV file, and it validates against the XMLTV DTD. Each channel has its name, its number and its logo. The channel ids are the tuner's channel numbers (for example `5.1` or `21`), so a media server can match them to the tuner's channels.
 
-### API Documentation
-![Swagger UI](images/openapi.png)
+Each programme carries what the guide has for it:
 
-## 🚀 Usage
+- title, episode title and description
+- categories from both of SiliconDust's sources
+- original air date, and whether it is a first showing or a repeat
+- episode number as shown on screen (`S09E18`), in `xmltv_ns` form and as a Schedules Direct `dd_progid`
+- language, star rating, HD quality, image and poster
 
+## Run it
 
-### 🐳 Docker (Recommended)
-
-One official Docker image is available at `ghcr.io/thekoma/hdhomerunepgxml`.
-
-Run the service using Docker Compose:
-
+### Docker
 
 ```bash
-docker compose up --build -d
+docker run -d --name hdhomerun-epg -p 8000:8000 \
+  -e HDHOMERUN_HOST=192.168.1.100 \
+  -v hdhomerun-epg-cache:/data \
+  ghcr.io/thekoma/hdhomerunepgxml:latest
 ```
 
-The XMLTV file will be available at:
-`http://localhost:8000/epg.xml`
+The image keeps its cache in `/data`, and the volume keeps the cache across restarts. The published images are for amd64. On an ARM machine, such as a Raspberry Pi, build the image from this repository with `docker compose up --build -d`.
 
-The image keeps the cache in `/data/epg_cache.db`, and the compose file stores `/data` in the named volume `epg-cache`, so the cache survives restarts. If you run the container with a different `user:`, mount a host directory that this user can write to on `/data`.
+### Kubernetes
 
-### ⚙️ Configuration
+[DEPLOY.md](DEPLOY.md) has Helm, Argo CD and Flux examples based on the bjw-s app-template chart.
 
-The application is fully configurable via Environment Variables.
+### Connect your media server
 
-| | Variable | Default | Description |
-|-------|----------|---------|-------------|
-| 🏠 | `HDHOMERUN_HOST` | `hdhomerun.local` | IP or Hostname of your HDHomeRun device. |
-| 📅 | `HDHOMERUN_EPG_DAYS` | `4` | Number of days of EPG data to fetch. |
-| ⏱️ | `HDHOMERUN_EPG_HOURS` | `4` | Size of each fetch chunk in hours. guide.php returns 4 hours per call, so values above 4 leave gaps in the guide. |
-| 🐛 | `HDHOMERUN_DEBUG_MODE` | `on` | Enable detailed debug logging. |
-| 💾 | `HDHOMERUN_CACHE_ENABLED`| `True` | Set to `False` to completely disable caching. |
-| 📦 | `HDHOMERUN_CACHE_DB_PATH`| `epg_cache.db` (`/data/epg_cache.db` in the Docker image) | Path to the SQLite cache file. |
-| ⏳ | `HDHOMERUN_CACHE_TTL_SECONDS`| `86400` | How long (in seconds) to keep cached data (Default: 24h). |
+Add an XMLTV guide source in Jellyfin, Plex or Emby with the URL `http://<host>:8000/epg.xml`.
 
-### ⚡ API Endpoints
+The service has no authentication. Keep it on your network, or put it behind a proxy that checks who is asking.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | **Responsive Root**. Returns **Dashboard (HTML)** for browsers or **Status (JSON)** for API clients. |
-| `GET` | `/guide` | **TV Guide**. Visual TV Guide showing programs for the next 24 hours. |
-| `GET` | `/epg.xml` | **Main Endpoint**. Fetches and returns the generated XMLTV file. |
-| `GET` | `/healthcheck` | **Liveness**. Returns `{"status": "ok"}`. |
-| `DELETE`| `/cache` | **Maintenance**. Manually clears the entire local cache. |
+## Configuration
 
-### 🛠️ Local Development
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `HDHOMERUN_HOST` | `hdhomerun.local` | Address of the tuner. |
+| `HDHOMERUN_EPG_DAYS` | `4` | How many days ahead to fetch at most. The free guide ends after about two days. |
+| `HDHOMERUN_EPG_HOURS` | `4` | Hours per request to `guide.php`. Each response covers 4 hours, so a higher value leaves gaps. |
+| `HDHOMERUN_CACHE_ENABLED` | `True` | Set to `False` to fetch the whole guide on every request. SiliconDust's XMLTV feed needs the cache, so it is skipped. |
+| `HDHOMERUN_CACHE_DB_PATH` | `epg_cache.db`, `/data/epg_cache.db` in the image | Path of the SQLite cache. |
+| `HDHOMERUN_CACHE_TTL_SECONDS` | `86400` | How long a cached chunk stays fresh. |
+| `HDHOMERUN_DEBUG_MODE` | `on` | `on` logs the library at debug level; any other value logs at info level. |
+| `HDHOMERUN_OUTPUT_FILENAME` | `epg.xml` | Used only by the library's `write_to_file`. The service does not write a file. |
 
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Status page and API
 
-2. Run the service:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+![The status page: service state, cached chunks, cache size and guide end, then the configuration and the cached chunks with a Clear cache button.](images/status.webp)
 
+`http://<host>:8000/` shows whether the service is up, the configuration with the values that differ from the defaults marked, and every cached chunk with its age. The Clear cache button empties the cache.
 
-## 🙏 Credits
+| Method | Path | Returns |
+| --- | --- | --- |
+| `GET` | `/` | The status page, or the status as JSON when the request accepts `application/json` |
+| `GET` | `/guide` | The TV guide |
+| `GET` | `/epg.xml` | The XMLTV feed |
+| `GET` | `/cache` | The cached chunks as JSON |
+| `DELETE` | `/cache` | Empties the cache |
+| `GET` | `/healthcheck` | `{"status": "ok"}` |
+| `GET` | `/docs` | The OpenAPI documentation |
 
-This project is a fork and modernization of [HDHomeRunEPG-to-XmlTv](https://github.com/IncubusVictim/HDHomeRunEPG-to-XmlTv) by @IncubusVictim.
-The original reverse engineering and core logic provided the critical foundation for this application.
+## Development
+
+Run these from the repository root:
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+pytest
+```
+
+`pre-commit install` adds the ruff and pytest hooks from `.pre-commit-config.yaml`. CI runs the tests on Python 3.9, 3.10, 3.11 and 3.12, and ruff at the version the pre-commit file pins.
+
+## Credits
+
+This project started as a fork of [HDHomeRunEPG-to-XmlTv](https://github.com/IncubusVictim/HDHomeRunEPG-to-XmlTv) by @IncubusVictim, whose reverse engineering of the guide service it still builds on.
+
+HDHomeRun is a SiliconDust product. This project is not affiliated with SiliconDust. It is released under the [MIT licence](LICENSE).

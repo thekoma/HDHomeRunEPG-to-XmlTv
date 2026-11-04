@@ -1,47 +1,94 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: hdhomerun-epg
   namespace: media
 spec:
-  interval: 5m
+  interval: 30m
   chart:
     spec:
-      chart: application
-      version: "1.0.x"
+      # bjw-s app-template: https://bjw-s-labs.github.io/helm-charts/docs/app-template/
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: stakater
+        name: bjw-s
         namespace: flux-system
-      interval: 1m
+      interval: 12h
   values:
-    applicationName: hdhomerun-epg
-    deployment:
-      enabled: true
-      replicas: 1
-      image:
-        repository: ghcr.io/thekoma/hdhomerunepgxml
-        tag: latest
-        pullPolicy: Always
-      ports:
-        - name: http
-          containerPort: 8000
-          protocol: TCP
-      volumes:
-        data:
-          emptyDir: {}
-      volumeMounts:
-        data:
-          mountPath: /data
-      env:
-        HDHOMERUN_HOST:
-          value: "10.0.1.2"
-        HDHOMERUN_CACHE_DB_PATH:
-          value: "/data/epg_cache.db"
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: ghcr.io/thekoma/hdhomerunepgxml
+              tag: 2026.11.0
+            env:
+              # The address of your HDHomeRun tuner.
+              HDHOMERUN_HOST: 10.0.1.2
+              HDHOMERUN_DEBUG_MODE: "off"
+            probes:
+              liveness:
+                enabled: true
+                type: HTTP
+                path: /healthcheck
+                port: 8000
+              readiness:
+                enabled: true
+                type: HTTP
+                path: /healthcheck
+                port: 8000
+            resources:
+              requests:
+                cpu: 50m
+                memory: 192Mi
+              limits:
+                memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
     service:
-      enabled: true
-      ports:
-        - name: http
-          port: 80
-          targetPort: 8000
-          protocol: TCP
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8000
+
+    persistence:
+      # The SQLite cache (/data/epg_cache.db). It refills on its own, so an
+      # emptyDir is enough. To keep it across restarts, use a
+      # persistentVolumeClaim instead.
+      data:
+        type: emptyDir
+      # SQLite writes temporary files here, for example when the cache is cleared.
+      tmp:
+        type: emptyDir
+
+    # The service has no authentication. Keep it on your LAN, or put it behind an
+    # authenticating proxy before you expose it.
+    ingress:
+      main:
+        enabled: false
+        className: nginx
+        hosts:
+          - host: tvguide.example.com
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http

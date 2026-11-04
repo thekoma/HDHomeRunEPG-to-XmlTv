@@ -1,68 +1,71 @@
-# Deployment Guide
+# Deploying to Kubernetes
 
-This guide describes how to deploy the **HDHomeRun EPG to XMLTV** service using Kubernetes.
-We utilize the generic [Stakater Application Helm Chart](https://github.com/stakater/stakater-charts/tree/master/docs/application) to simplify deployment.
+The examples in [`deploy/`](deploy/) install the service with the [bjw-s app-template](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) chart, version 5.3.0, which needs Kubernetes 1.28 or later. The Helm, Argo CD and Flux examples use the same values.
 
-## Prerequisites
+## Before you start
 
--   Kubernetes Cluster 1.19+
--   Helm 3.0+
--   (Optional) ArgoCD or FluxCD for GitOps
+- Set `HDHOMERUN_HOST` to your tuner's address. The pod must be able to reach the tuner on your network.
+- The examples pin the image to `2026.11.0`. Change `tag` when you move to a newer [release](https://github.com/thekoma/HDHomeRunEPG-to-XmlTv/releases).
+- The pod runs as user 1001 with a read-only root filesystem. Two `emptyDir` volumes are writable: `/data` for the SQLite cache and `/tmp` for SQLite's temporary files.
+- After a restart the cache fills up again on the first requests. To keep it across restarts, replace the `data` volume with a claim:
 
-## Configuration
+  ```yaml
+  persistence:
+    data:
+      type: persistentVolumeClaim
+      accessMode: ReadWriteOnce
+      size: 1Gi
+  ```
 
-The application requires the following key environment variables:
+- The pod requests 192 MiB of memory with a 512 MiB limit. On a tuner with 162 channels it uses about 180 MiB once it has built the feed and the guide.
+- The liveness and readiness probes call `/healthcheck` on port 8000.
 
-| Variable | Description | Recommended Value |
-| :--- | :--- | :--- |
-| `HDHOMERUN_HOST` | IP address of your HDHomeRun device | `10.0.1.2` |
-| `HDHOMERUN_CACHE_DB_PATH` | Path to store the SQLite cache | `/data/epg_cache.db` |
-| `HDHOMERUN_CACHE_ENABLED` | Enable caching | `true` |
-
-> [!IMPORTANT]
-> **Persistence**: To persist the EPG cache across restarts, we mount a volume to `/data` and configure `HDHOMERUN_CACHE_DB_PATH` to point to it.
-
-## 1. Manual Deployment (Helm CLI)
-
-You can deploy directly using the configurations in `deploy/helm/values.yaml`.
+## Helm
 
 ```bash
-# Add Stakater repo
-helm repo add stakater https://stakater.github.io/stakater-charts
+helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts
 helm repo update
 
-# Install/Upgrade
-helm upgrade --install hdhomerun-epg stakater/application \
+helm upgrade --install hdhomerun-epg bjw-s/app-template --version 5.3.0 \
   --namespace media --create-namespace \
-  --values deploy/helm/values.yaml \
-  --set deployment.image.tag=2025.12.0 # Replace with desired version
+  --values deploy/helm/values.yaml
 ```
 
-## 2. ArgoCD Deployment
+## Argo CD
 
-We support ArgoCD using the **App of Apps** pattern or direct Application manifests.
-The configuration uses `valuesObject` to embed values directly in the manifest.
-
-**File**: `deploy/argocd/application.yaml`
+[`deploy/argocd/`](deploy/argocd/) holds the `tvguide` namespace and an `Application` that installs the chart from the bjw-s Helm repository, with the values in `valuesObject`.
 
 ```bash
-kubectl apply -f deploy/argocd/application.yaml
+kubectl apply -k deploy/argocd
 ```
 
-## 3. FluxCD Deployment
+## Flux
 
-For FluxCD users, use the provided `HelmRepository` and `HelmRelease` resources.
-
-**Files**:
--   `deploy/flux/repo.yaml`: Registers Stakater chart repo.
--   `deploy/flux/release.yaml`: Defines the release.
+[`deploy/flux/`](deploy/flux/) holds the `media` namespace, a `HelmRepository` for the bjw-s charts and the `HelmRelease`. It uses `source.toolkit.fluxcd.io/v1` and `helm.toolkit.fluxcd.io/v2`, so it needs Flux 2.3 or later.
 
 ```bash
-kubectl apply -f deploy/flux/repo.yaml
-kubectl apply -f deploy/flux/release.yaml
+kubectl apply -k deploy/flux
 ```
 
-## Customizing Values
+## Reaching the guide from outside the cluster
 
-To enable Ingress or change resources, modify the respective sections in the YAML files.
-See the [Stakater Application Chart Documentation](https://github.com/stakater/stakater-charts/tree/master/docs/application) for all available options.
+The values include an `ingress` entry that is turned off. The service has no authentication, so expose it only on your own network or behind an authenticating proxy. To turn the ingress on, set `enabled: true`, your ingress class and your host name:
+
+```yaml
+ingress:
+  main:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: tvguide.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              identifier: main
+              port: http
+```
+
+## Moving from the Stakater chart
+
+Earlier versions of these examples used the Stakater `application` chart. The two charts give the Deployment different selector labels, and Kubernetes does not let you change the selector of an existing Deployment. Delete the old Deployment, or uninstall the old release, before you install app-template under the same name.
