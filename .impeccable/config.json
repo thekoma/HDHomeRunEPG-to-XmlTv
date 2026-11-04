@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "app/static/app.css"
+        ],
+        "createdAt": "2026-11-04T18:12:54.237Z",
+        "reason": "agent decision: .tick.midnight border-left is the 2px midnight rule of the time ruler required by the direction contract (day boundary), not a card accent"
+      }
+    ]
+  }
+}
