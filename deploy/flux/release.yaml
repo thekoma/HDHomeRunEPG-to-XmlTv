@@ -22,7 +22,8 @@ spec:
           main:
             image:
               repository: ghcr.io/thekoma/hdhomerunepgxml
-              tag: 2026.11.0
+              tag: latest
+              pullPolicy: Always
             env:
               # The address of your HDHomeRun tuner.
               HDHOMERUN_HOST: 10.0.1.2
