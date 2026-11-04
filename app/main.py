@@ -79,7 +79,7 @@ def read_root(request: Request):
 
     # Default to Dashboard
     config_items = []
-    for field_name, field_info in settings.model_fields.items():
+    for field_name, field_info in type(settings).model_fields.items():
         value = getattr(settings, field_name)
         default = field_info.default
         is_default = value == default
