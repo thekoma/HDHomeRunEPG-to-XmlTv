@@ -90,7 +90,7 @@ The application is fully configurable via Environment Variables.
 |-------|----------|---------|-------------|
 | 🏠 | `HDHOMERUN_HOST` | `hdhomerun.local` | IP or Hostname of your HDHomeRun device. |
 | 📅 | `HDHOMERUN_EPG_DAYS` | `4` | Number of days of EPG data to fetch. |
-| ⏱️ | `HDHOMERUN_EPG_HOURS` | `2` | Size of each fetch chunk in hours. Smaller chunks = more granular caching. |
+| ⏱️ | `HDHOMERUN_EPG_HOURS` | `4` | Size of each fetch chunk in hours. guide.php returns 4 hours per call, so values above 4 leave gaps in the guide. |
 | 🐛 | `HDHOMERUN_DEBUG_MODE` | `on` | Enable detailed debug logging. |
 | 💾 | `HDHOMERUN_CACHE_ENABLED`| `True` | Set to `False` to completely disable caching. |
 | 📦 | `HDHOMERUN_CACHE_DB_PATH`| `epg_cache.db` | Path to the SQLite cache file. |
