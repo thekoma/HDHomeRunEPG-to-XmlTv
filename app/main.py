@@ -74,16 +74,12 @@ def read_root(request: Request):
         value = getattr(settings, field_name)
         default = field_info.default
         is_default = value == default
-        config_items.append({
-            "name": field_name,
-            "value": value,
-            "is_default": is_default
-        })
+        config_items.append(
+            {"name": field_name, "value": value, "is_default": is_default}
+        )
 
     return templates.TemplateResponse(
-        request=request, 
-        name="dashboard.html", 
-        context={"config_items": config_items}
+        request=request, name="dashboard.html", context={"config_items": config_items}
     )
 
 
@@ -130,7 +126,7 @@ def tv_guide(request: Request):
             # starting from the left edge (Now).
             visual_start = max(p["StartTime"], now)
             visual_duration_seconds = p["EndTime"] - visual_start
-            
+
             # Width calculation
             visual_duration_minutes = visual_duration_seconds / 60
             p["width_px"] = int(visual_duration_minutes * pixels_per_minute)
@@ -152,39 +148,41 @@ def tv_guide(request: Request):
         # Ensure programs are aligned to the timeline by inserting spacer blocks for gaps.
         # This fixes the issue where gaps cause subsequent programs to shift left (desync),
         # leaving the end of the timeline empty.
-        
-        timeline_end_time = now + (settings.epg_days * 24 * 60 * 60)
-        
+
         for guide_number, progs in grouped_programmes.items():
             # Ensure sorted
             progs.sort(key=lambda x: x["StartTime"])
-            
+
             filled_progs = []
             # Cursor tracks the end of the last added element (starting at Now)
             cursor = now
-            
+
             for p in progs:
                 # Calculate gap from cursor to program start
                 # We only care if program starts after cursor.
                 if p["StartTime"] > cursor:
                     gap_seconds = p["StartTime"] - cursor
                     # Only render gap if significant (> 1 minute visual)
-                    if gap_seconds > 0: # render even small gaps to maintain perfect sync
+                    if (
+                        gap_seconds > 0
+                    ):  # render even small gaps to maintain perfect sync
                         gap_minutes = gap_seconds / 60
                         gap_px = int(gap_minutes * pixels_per_minute)
                         if gap_px > 0:
-                            filled_progs.append({
-                                "is_gap": True,
-                                "width_px": gap_px,
-                                "StartTime": cursor,
-                                "EndTime": p["StartTime"],
-                                "title": "No Data" # Helper
-                            })
-                
+                            filled_progs.append(
+                                {
+                                    "is_gap": True,
+                                    "width_px": gap_px,
+                                    "StartTime": cursor,
+                                    "EndTime": p["StartTime"],
+                                    "title": "No Data",  # Helper
+                                }
+                            )
+
                 filled_progs.append(p)
                 # update cursor to end of this program
                 cursor = max(cursor, p["EndTime"])
-            
+
             # Optional: Fill remainder of timeline
             # if cursor < timeline_end_time:
             #     gap_seconds = timeline_end_time - cursor
@@ -208,9 +206,9 @@ def tv_guide(request: Request):
             request=request,
             name="guide.html",
             context={
-                "channels": channels, 
+                "channels": channels,
                 "grouped_data": grouped_data,
-                "epg_days": settings.epg_days
+                "epg_days": settings.epg_days,
             },
         )
 
