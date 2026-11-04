@@ -5,7 +5,7 @@ The examples in [`deploy/`](deploy/) install the service with the [bjw-s app-tem
 ## Before you start
 
 - Set `HDHOMERUN_HOST` to your tuner's address. The pod must be able to reach the tuner on your network.
-- The examples pin the image to `2026.11.0`. Change `tag` when you move to a newer [release](https://github.com/thekoma/HDHomeRunEPG-to-XmlTv/releases).
+- The examples use the `latest` image with `pullPolicy: Always`, so a pod gets the newest release when it starts. Run `kubectl rollout restart` to update a running pod. To choose when you upgrade, set `tag` to a [release](https://github.com/thekoma/HDHomeRunEPG-to-XmlTv/releases) such as `2026.11.1`.
 - The pod runs as user 1001 with a read-only root filesystem. Two `emptyDir` volumes are writable: `/data` for the SQLite cache and `/tmp` for SQLite's temporary files.
 - After a restart the cache fills up again on the first requests. To keep it across restarts, replace the `data` volume with a claim:
 
