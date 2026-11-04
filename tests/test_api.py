@@ -78,3 +78,17 @@ def test_tv_guide_endpoint(monkeypatch):
     assert "text/html" in response.headers["content-type"]
     assert "TV Guide" in response.text
     assert "Test Prog" in response.text
+
+
+def test_tv_guide_error_page(monkeypatch):
+    from hdhomerun_epg import client as lib_client
+
+    def failing_fetch(self, days=1, hours=4):
+        raise RuntimeError("Tuner <unreachable>")
+
+    monkeypatch.setattr(lib_client.HDHomeRunClient, "fetch_epg_data", failing_fetch)
+
+    response = client.get("/guide")
+    assert response.status_code == 500
+    assert "The guide couldn't be loaded" in response.text
+    assert "Tuner &lt;unreachable&gt;" in response.text
