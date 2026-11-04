@@ -80,3 +80,37 @@ def test_fetch_epg_integration_logic(temp_db_path, monkeypatch):
 
     # Real integration tests are harder without extensive mocking of time
     # But basic structure is tested via mocks above
+
+
+def test_fetch_epg_keeps_guide_channel_details(monkeypatch):
+    from hdhomerun_epg.config import settings
+
+    monkeypatch.setattr(settings, "cache_enabled", False)
+
+    client = HDHomeRunClient("1.2.3.4")
+    client.device_auth = "TEST"
+    client.fetch_channels = MagicMock(
+        return_value=[{"GuideNumber": "3", "GuideName": "RAI3RLO", "HD": 1}]
+    )
+
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.return_value.json.return_value = [
+            {
+                "GuideNumber": "3",
+                "GuideName": "RAI3RLO",
+                "Affiliate": "Rai 3",
+                "ImageURL": "http://img/rai3.png",
+                "Guide": [{"Title": "TG3", "StartTime": 1000000000}],
+            }
+        ]
+        epg = client.fetch_epg_data(days=1, hours=24)
+
+    assert epg["channels"] == [
+        {
+            "GuideNumber": "3",
+            "GuideName": "RAI3RLO",
+            "HD": 1,
+            "ImageURL": "http://img/rai3.png",
+            "Affiliate": "Rai 3",
+        }
+    ]

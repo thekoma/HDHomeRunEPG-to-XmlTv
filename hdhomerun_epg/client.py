@@ -192,6 +192,9 @@ class HDHomeRunClient:
                         channel_info["ImageURL"] = channel_epg_segment.get(
                             "ImageURL", ""
                         )
+                        # The network name, e.g. "Rai 3" for a regional "RAI3RLO".
+                        if channel_epg_segment.get("Affiliate"):
+                            channel_info["Affiliate"] = channel_epg_segment["Affiliate"]
                         epg_data["channels"].append(channel_info)
 
                     for programme in programmes_list:
