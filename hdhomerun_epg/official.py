@@ -7,6 +7,8 @@ Schedules Direct programme ids. It cannot replace guide.php: it repeats one
 channel id on several channel numbers, and its ids differ from ours.
 """
 
+from __future__ import annotations
+
 import datetime
 import xml.etree.ElementTree as ET
 from collections import defaultdict
