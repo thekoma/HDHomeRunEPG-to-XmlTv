@@ -82,6 +82,8 @@ docker compose up --build -d
 The XMLTV file will be available at:
 `http://localhost:8000/epg.xml`
 
+The image keeps the cache in `/data/epg_cache.db`, and the compose file stores `/data` in the named volume `epg-cache`, so the cache survives restarts. If you run the container with a different `user:`, mount a host directory that this user can write to on `/data`.
+
 ### ⚙️ Configuration
 
 The application is fully configurable via Environment Variables.
@@ -93,7 +95,7 @@ The application is fully configurable via Environment Variables.
 | ⏱️ | `HDHOMERUN_EPG_HOURS` | `4` | Size of each fetch chunk in hours. guide.php returns 4 hours per call, so values above 4 leave gaps in the guide. |
 | 🐛 | `HDHOMERUN_DEBUG_MODE` | `on` | Enable detailed debug logging. |
 | 💾 | `HDHOMERUN_CACHE_ENABLED`| `True` | Set to `False` to completely disable caching. |
-| 📦 | `HDHOMERUN_CACHE_DB_PATH`| `epg_cache.db` | Path to the SQLite cache file. |
+| 📦 | `HDHOMERUN_CACHE_DB_PATH`| `epg_cache.db` (`/data/epg_cache.db` in the Docker image) | Path to the SQLite cache file. |
 | ⏳ | `HDHOMERUN_CACHE_TTL_SECONDS`| `86400` | How long (in seconds) to keep cached data (Default: 24h). |
 
 ### ⚡ API Endpoints
