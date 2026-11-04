@@ -14,6 +14,10 @@ RUN addgroup --gid 1001 appuser && \
 COPY --chown=appuser:appuser hdhomerun_epg/ /code/hdhomerun_epg/
 COPY --chown=appuser:appuser app/ /code/app/
 
+# /code is owned by root, so the SQLite cache needs a directory appuser can write to
+RUN mkdir /data && chown appuser:appuser /data
+ENV HDHOMERUN_CACHE_DB_PATH=/data/epg_cache.db
+
 # Expose port
 EXPOSE 8000
 

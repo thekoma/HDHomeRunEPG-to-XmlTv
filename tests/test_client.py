@@ -1,4 +1,5 @@
 import pytest
+import requests
 from unittest.mock import MagicMock, patch
 from hdhomerun_epg.client import HDHomeRunClient
 
@@ -80,3 +81,192 @@ def test_fetch_epg_integration_logic(temp_db_path, monkeypatch):
 
     # Real integration tests are harder without extensive mocking of time
     # But basic structure is tested via mocks above
+
+
+@pytest.fixture
+def guide_client(monkeypatch, mock_discovery_response):
+    from hdhomerun_epg.config import settings
+
+    monkeypatch.setattr(settings, "cache_enabled", False)
+    client = HDHomeRunClient("1.2.3.4")
+    client.device_auth = mock_discovery_response["DeviceAuth"]
+    client.fetch_channels = MagicMock(
+        return_value=[{"GuideNumber": "5.1"}, {"GuideNumber": "6.1"}]
+    )
+    return client
+
+
+def test_fetch_epg_deduplication(guide_client):
+    programme = {"StartTime": 100, "EndTime": 200, "Title": "Test Show"}
+    with patch("requests.Session") as mock_session_cls:
+        mock_session = mock_session_cls.return_value
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {
+                "GuideNumber": "5.1",
+                "Guide": [programme.copy(), dict(programme, StartTime=300)],
+            },
+            {"GuideNumber": "6.1", "Guide": [programme.copy()]},
+        ]
+        mock_session.get.return_value = mock_response
+        result = guide_client.fetch_epg_data(days=1, hours=12)
+        assert len(result["programmes"]) == 3
+        assert mock_session.get.call_count == 2
+        for call in mock_session.get.call_args_list:
+            assert call.kwargs["verify"] is True
+            assert call.kwargs["timeout"] == 30
+
+
+@pytest.mark.parametrize(
+    "error", [requests.Timeout, requests.HTTPError, requests.exceptions.SSLError]
+)
+def test_fetch_epg_request_error(guide_client, caplog, error):
+    import traceback
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {"GuideNumber": "5.1", "Guide": [{"StartTime": 100, "Title": "Test Show"}]}
+    ]
+    with patch("requests.Session") as mock_session_cls:
+        mock_session = mock_session_cls.return_value
+        mock_session.get.side_effect = [
+            mock_response,
+            error("https://provider.test/?DeviceAuth=" + guide_client.device_auth),
+        ]
+        with pytest.raises(RuntimeError, match="temporarily unavailable") as raised:
+            guide_client.fetch_epg_data(days=1, hours=12)
+    assert error.__name__ in caplog.text
+    assert guide_client.device_auth not in "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert guide_client.device_auth not in caplog.text
+    assert guide_client.device_auth not in str(raised.value)
+
+
+def test_device_auth_logging(caplog, mock_discovery_response, mock_lineup_response):
+    import logging
+
+    caplog.set_level(logging.INFO, logger="hdhomerun_epg")
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.json.side_effect = [
+            mock_discovery_response,
+            mock_lineup_response,
+        ]
+        client = HDHomeRunClient("1.2.3.4")
+        client.fetch_channels()
+    assert mock_discovery_response["DeviceAuth"] not in caplog.text
+
+
+def guide_response(start):
+    response = MagicMock()
+    response.json.return_value = [
+        {
+            "GuideNumber": "5.1",
+            "Guide": [{"StartTime": start, "Title": f"Show {start}"}],
+        }
+    ]
+    return response
+
+
+def end_of_guide(client):
+    """guide.php's answer for a Start past the end of its guide."""
+    return requests.HTTPError(
+        "400 Client Error for url: https://provider.test/?DeviceAuth="
+        + client.device_auth,
+        response=MagicMock(status_code=400),
+    )
+
+
+def test_end_of_guide_is_not_an_error(guide_client, caplog):
+    import logging
+
+    caplog.set_level(logging.INFO, logger="hdhomerun_epg")
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.side_effect = [
+            guide_response(100),
+            end_of_guide(guide_client),
+        ]
+        result = guide_client.fetch_epg_data(days=1, hours=12)
+
+    assert [p["Title"] for p in result["programmes"]] == ["Show 100"]
+    assert "guide ends" in caplog.text
+    assert guide_client.device_auth not in caplog.text
+
+
+def test_end_of_guide_on_the_first_chunk_is_an_error(guide_client):
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.side_effect = [end_of_guide(guide_client)]
+        with pytest.raises(RuntimeError, match="temporarily unavailable"):
+            guide_client.fetch_epg_data(days=1, hours=12)
+
+
+def test_chunk_before_the_end_of_guide_is_not_cached(
+    guide_client, temp_db_path, monkeypatch
+):
+    from hdhomerun_epg.cache import CacheManager
+    from hdhomerun_epg.config import settings
+
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    monkeypatch.setattr(settings, "cache_db_path", temp_db_path)
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.side_effect = [
+            guide_response(100),
+            guide_response(200),
+            end_of_guide(guide_client),
+        ]
+        guide_client.fetch_epg_data(days=1, hours=8)
+
+    # The second chunk runs past the end of the guide, so part of it is
+    # missing; caching it would keep that gap for a whole TTL.
+    assert len(CacheManager(temp_db_path).get_status()) == 1
+
+
+def test_known_end_of_guide_is_not_requested_again(guide_client):
+    with patch("requests.Session") as mock_session_cls:
+        mock_get = mock_session_cls.return_value.get
+        mock_get.side_effect = [guide_response(100), end_of_guide(guide_client)]
+        guide_client.fetch_epg_data(days=1, hours=12)
+
+        mock_get.reset_mock(side_effect=True)
+        mock_get.side_effect = [guide_response(100)]
+        result = guide_client.fetch_epg_data(days=1, hours=12)
+
+    assert mock_get.call_count == 1
+    assert [p["Title"] for p in result["programmes"]] == ["Show 100"]
+
+
+def test_complete_guide_is_cached(guide_client, temp_db_path, monkeypatch):
+    from hdhomerun_epg.cache import CacheManager
+    from hdhomerun_epg.config import settings
+
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    monkeypatch.setattr(settings, "cache_db_path", temp_db_path)
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.side_effect = [
+            guide_response(100),
+            guide_response(200),
+        ]
+        guide_client.fetch_epg_data(days=1, hours=12)
+
+    assert len(CacheManager(temp_db_path).get_status()) == 2
+
+
+def test_end_of_guide_is_asked_again_after_a_chunk(guide_client, monkeypatch):
+    from hdhomerun_epg.client import HDHomeRunClient
+
+    with patch("requests.Session") as mock_session_cls:
+        mock_get = mock_session_cls.return_value.get
+        mock_get.side_effect = [guide_response(100), end_of_guide(guide_client)]
+        guide_client.fetch_epg_data(days=1, hours=12)
+
+        # Twelve hours later the guide window has moved past that Start.
+        refused_start, refused_at = HDHomeRunClient._guide_end
+        HDHomeRunClient._guide_end = (refused_start, refused_at - 12 * 3600)
+        mock_get.reset_mock(side_effect=True)
+        mock_get.side_effect = [guide_response(100), guide_response(200)]
+        result = guide_client.fetch_epg_data(days=1, hours=12)
+
+    assert mock_get.call_count == 2
+    assert len(result["programmes"]) == 2
