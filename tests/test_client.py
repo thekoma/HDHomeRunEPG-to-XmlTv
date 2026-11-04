@@ -1,7 +1,13 @@
+import time
+from unittest.mock import MagicMock, patch
+
 import pytest
 import requests
-from unittest.mock import MagicMock, patch
+
+from hdhomerun_epg.cache import CacheManager
 from hdhomerun_epg.client import HDHomeRunClient
+from hdhomerun_epg.official import parse_details
+from tests.conftest import OFFICIAL_FEED, OFFICIAL_START
 
 
 @pytest.fixture
@@ -127,6 +133,8 @@ def guide_client(monkeypatch, mock_discovery_response):
     client.fetch_channels = MagicMock(
         return_value=[{"GuideNumber": "5.1"}, {"GuideNumber": "6.1"}]
     )
+    # No call to SiliconDust's XMLTV feed from the tests that use the cache.
+    client.fetch_official_details = MagicMock(return_value={})
     return client
 
 
@@ -304,3 +312,100 @@ def test_end_of_guide_is_asked_again_after_a_chunk(guide_client, monkeypatch):
 
     assert mock_get.call_count == 2
     assert len(result["programmes"]) == 2
+
+
+def test_fetch_epg_adds_official_details(temp_db_path, monkeypatch):
+    from hdhomerun_epg.config import settings
+
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    monkeypatch.setattr(settings, "cache_db_path", temp_db_path)
+
+    client = HDHomeRunClient("1.2.3.4")
+    client.device_auth = "TEST"
+    client.fetch_channels = MagicMock(
+        return_value=[{"GuideNumber": "3", "GuideName": "RAI3RLO"}]
+    )
+    client.fetch_official_details = MagicMock(return_value=parse_details(OFFICIAL_FEED))
+
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.return_value.json.return_value = [
+            {
+                "GuideNumber": "3",
+                "Guide": [{"Title": "1939-1945", "StartTime": OFFICIAL_START}],
+            }
+        ]
+        epg = client.fetch_epg_data(days=1, hours=24)
+
+    assert epg["programmes"][0]["Synopsis"] == "Il 10 giugno 1940."
+
+
+def official_client():
+    client = HDHomeRunClient("1.2.3.4")
+    client.device_auth = "SECRET"
+    return client
+
+
+def test_official_details_come_from_the_cache_while_fresh(temp_db_path):
+    cache = CacheManager(temp_db_path)
+    cache.save_feed(
+        "official_xmltv", {"3|1": {"Synopsis": "x"}}, expires_at=int(time.time()) + 60
+    )
+
+    with patch("requests.get") as mock_get:
+        assert official_client().fetch_official_details(cache) == {
+            "3|1": {"Synopsis": "x"}
+        }
+    mock_get.assert_not_called()
+
+
+def test_official_details_refresh_every_20_to_28_hours(temp_db_path):
+    cache = CacheManager(temp_db_path)
+
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.content = OFFICIAL_FEED
+        details = official_client().fetch_official_details(cache)
+
+    assert f"3|{OFFICIAL_START}" in details
+    mock_get.assert_called_once_with(
+        "https://api.hdhomerun.com/api/xmltv",
+        params={"DeviceAuth": "SECRET"},
+        timeout=60,
+    )
+    expires_in = cache.get_feed("official_xmltv")["expires_at"] - time.time()
+    assert 20 * 3600 - 5 <= expires_in <= 28 * 3600
+
+
+def test_official_feed_failure_keeps_old_details_and_hides_device_auth(
+    temp_db_path, caplog
+):
+    cache = CacheManager(temp_db_path)
+    cache.save_feed("official_xmltv", {"3|1": {"Synopsis": "old"}}, expires_at=1)
+    error = requests.ConnectionError(
+        "Max retries exceeded: /api/xmltv?DeviceAuth=SECRET"
+    )
+
+    with patch("requests.get", side_effect=error):
+        details = official_client().fetch_official_details(cache)
+
+    assert details == {"3|1": {"Synopsis": "old"}}
+    assert "ConnectionError" in caplog.text
+    assert "SECRET" not in caplog.text
+    # Retry in an hour, not on every request.
+    expires_in = cache.get_feed("official_xmltv")["expires_at"] - time.time()
+    assert 3600 - 5 <= expires_in <= 3600
+
+
+def test_official_feed_is_skipped_without_a_working_cache(
+    guide_client, tmp_path, monkeypatch
+):
+    from hdhomerun_epg.config import settings
+
+    # Without a working cache, the feed would be downloaded on every request.
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    monkeypatch.setattr(settings, "cache_db_path", str(tmp_path / "missing" / "epg.db"))
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.side_effect = [guide_response(100)]
+        result = guide_client.fetch_epg_data(days=1, hours=24)
+
+    assert len(result["programmes"]) == 1
+    guide_client.fetch_official_details.assert_not_called()

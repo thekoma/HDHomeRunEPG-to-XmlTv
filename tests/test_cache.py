@@ -65,6 +65,25 @@ def test_clear_cache(temp_db_path):
         assert cursor.fetchone()[0] == 0
 
 
+def test_save_and_get_feed(temp_db_path):
+    cm = CacheManager(temp_db_path)
+    assert cm.get_feed("official") is None
+
+    cm.save_feed("official", {"3|100": {"Synopsis": "x"}}, expires_at=12345)
+
+    assert cm.get_feed("official") == {
+        "data": {"3|100": {"Synopsis": "x"}},
+        "expires_at": 12345,
+    }
+
+
+def test_clear_cache_clears_feeds(temp_db_path):
+    cm = CacheManager(temp_db_path)
+    cm.save_feed("official", {}, expires_at=1)
+    cm.clear_cache()
+    assert cm.get_feed("official") is None
+
+
 def test_cache_prunes_expired_chunks(temp_db_path, monkeypatch):
     now = 1_000_000
     monkeypatch.setattr(time, "time", lambda: now)
@@ -83,3 +102,8 @@ def test_cache_prunes_expired_chunks(temp_db_path, monkeypatch):
         assert cm.get_chunk(start) == [{"program": str(start)}]
     with sqlite3.connect(temp_db_path) as conn:
         assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+
+
+def test_cache_reports_whether_it_can_be_used(tmp_path):
+    assert CacheManager(str(tmp_path / "epg.db")).available
+    assert not CacheManager(str(tmp_path / "missing" / "epg.db")).available

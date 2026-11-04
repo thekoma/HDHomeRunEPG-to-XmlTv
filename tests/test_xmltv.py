@@ -9,11 +9,13 @@ PROGRAMME_ORDER = [
     "desc",
     "date",
     "category",
+    "language",
     "icon",
     "episode-num",
     "video",
     "previously-shown",
     "new",
+    "star-rating",
 ]
 
 
@@ -195,9 +197,39 @@ def test_programme_children_follow_dtd_order():
                 ImageURL="http://img/i.jpg",
                 EpisodeNumber="S01E02",
                 First=1,
+                Categories=["Series"],
+                Language="it",
+                ProgramID="EP1.2",
+                StarRating="3/4",
             )
         ],
     )
     tags = [child.tag for child in root.find("programme")]
     assert tags == sorted(tags, key=PROGRAMME_ORDER.index)
     assert set(tags) == set(PROGRAMME_ORDER) - {"previously-shown"}
+
+
+def test_official_details_are_written():
+    _, root = generate(
+        [{"GuideNumber": "3", "GuideName": "RAI3RLO"}],
+        [
+            programme(
+                GuideNumber="3",
+                Filter=["Documentary"],
+                Categories=["Series", "Documentary"],
+                Language="it",
+                ProgramID="EP02267119.0018",
+                EpisodeNumber="S01E03",
+                StarRating="2.0/4.0",
+            )
+        ],
+    )
+    prog = root.find("programme")
+    assert [c.text for c in prog.findall("category")] == ["Documentary", "Series"]
+    assert prog.find("language").text == "it"
+    assert [(e.get("system"), e.text) for e in prog.findall("episode-num")] == [
+        ("dd_progid", "EP02267119.0018"),
+        ("onscreen", "S01E03"),
+        ("xmltv_ns", "0.2."),
+    ]
+    assert prog.find("star-rating/value").text == "2.0/4.0"
