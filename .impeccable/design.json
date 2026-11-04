@@ -1,0 +1,585 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-04T18:18:53.607111+00:00",
+  "title": "Design System: HDHomeRun EPG",
+  "extensions": {
+    "colorMeta": {
+      "night-0": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "#0e1014",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-1": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "#15181d",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-2": {
+        "role": "neutral",
+        "displayName": "Raised",
+        "canonical": "#1c2026",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-3": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#262b33",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-4": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "canonical": "#3a414c",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-5": {
+        "role": "neutral",
+        "displayName": "Faint",
+        "canonical": "#7d8592",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-6": {
+        "role": "neutral",
+        "displayName": "Secondary Text",
+        "canonical": "#a9b0ba",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "night-7": {
+        "role": "neutral",
+        "displayName": "Primary Text",
+        "canonical": "#eef0f3",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "now-white": {
+        "role": "primary",
+        "displayName": "Now White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0e1014",
+          "#15181d",
+          "#1c2026",
+          "#262b33",
+          "#3a414c",
+          "#7d8592",
+          "#a9b0ba",
+          "#eef0f3"
+        ]
+      },
+      "genre-news": {
+        "role": "secondary",
+        "displayName": "Bulletin Blue",
+        "canonical": "#2f5bb7",
+        "tonalRamp": [
+          "#0e1b37",
+          "#182e5c",
+          "#214080",
+          "#2a52a5",
+          "#6384c9",
+          "#97addb",
+          "#c1cee9",
+          "#e6ebf6"
+        ]
+      },
+      "genre-drama": {
+        "role": "secondary",
+        "displayName": "Drama Violet",
+        "canonical": "#6a45b8",
+        "tonalRamp": [
+          "#201537",
+          "#35225c",
+          "#4a3081",
+          "#5f3ea6",
+          "#8f74ca",
+          "#b4a2dc",
+          "#d2c7ea",
+          "#ede9f6"
+        ]
+      },
+      "genre-comedy": {
+        "role": "secondary",
+        "displayName": "Late Plum",
+        "canonical": "#9a3f82",
+        "tonalRamp": [
+          "#2e1327",
+          "#4d2041",
+          "#6c2c5b",
+          "#8b3975",
+          "#b36fa1",
+          "#cc9fc0",
+          "#e1c5da",
+          "#f3e8f0"
+        ]
+      },
+      "genre-movies": {
+        "role": "secondary",
+        "displayName": "Marquee Red",
+        "canonical": "#b23a3a",
+        "tonalRamp": [
+          "#351111",
+          "#591d1d",
+          "#7d2929",
+          "#a03434",
+          "#c56b6b",
+          "#d89c9c",
+          "#e8c4c4",
+          "#f6e7e7"
+        ]
+      },
+      "genre-sports": {
+        "role": "secondary",
+        "displayName": "Pitch Green",
+        "canonical": "#22784d",
+        "tonalRamp": [
+          "#0a2417",
+          "#113c26",
+          "#185436",
+          "#1f6c45",
+          "#599a7a",
+          "#90bca6",
+          "#bdd6ca",
+          "#e4efea"
+        ]
+      },
+      "genre-kids": {
+        "role": "secondary",
+        "displayName": "Saturday Amber",
+        "canonical": "#9b6311",
+        "tonalRamp": [
+          "#2f1e05",
+          "#4e3208",
+          "#6c450c",
+          "#8c590f",
+          "#b48a4c",
+          "#cdb188",
+          "#e1d0b8",
+          "#f3ece2"
+        ]
+      },
+      "genre-documentary": {
+        "role": "secondary",
+        "displayName": "Deep Teal",
+        "canonical": "#16757a",
+        "tonalRamp": [
+          "#072325",
+          "#0b3a3d",
+          "#0f5255",
+          "#14696e",
+          "#50989b",
+          "#8ababc",
+          "#b9d6d7",
+          "#e3eeef"
+        ]
+      },
+      "genre-other": {
+        "role": "secondary",
+        "displayName": "Unfiled Slate",
+        "canonical": "#2e343d",
+        "tonalRamp": [
+          "#0e1012",
+          "#171a1e",
+          "#20242b",
+          "#292f37",
+          "#62676e",
+          "#969a9e",
+          "#c0c2c5",
+          "#e6e7e8"
+        ]
+      },
+      "state-ok": {
+        "role": "tertiary",
+        "displayName": "Online Green",
+        "canonical": "#5cc98a",
+        "tonalRamp": [
+          "#1c3c29",
+          "#2e6445",
+          "#408d61",
+          "#53b57c",
+          "#85d6a7",
+          "#aee4c4",
+          "#ceefdc",
+          "#ebf9f1"
+        ]
+      },
+      "state-warn": {
+        "role": "tertiary",
+        "displayName": "Caution Amber",
+        "canonical": "#e7b04b",
+        "tonalRamp": [
+          "#453517",
+          "#745826",
+          "#a27b34",
+          "#d09e44",
+          "#edc478",
+          "#f3d8a5",
+          "#f8e7c9",
+          "#fcf6e9"
+        ]
+      },
+      "state-bad": {
+        "role": "tertiary",
+        "displayName": "Fault Rose",
+        "canonical": "#f07c7c",
+        "tonalRamp": [
+          "#482525",
+          "#783e3e",
+          "#a85757",
+          "#d87070",
+          "#f49d9d",
+          "#f8bebe",
+          "#fad8d8",
+          "#fdefef"
+        ]
+      },
+      "danger-line": {
+        "role": "neutral",
+        "displayName": "Danger Line",
+        "canonical": "#7d3a3a",
+        "tonalRamp": [
+          "#261111",
+          "#3e1d1d",
+          "#582929",
+          "#703434",
+          "#9e6b6b",
+          "#be9c9c",
+          "#d8c4c4",
+          "#efe7e7"
+        ]
+      },
+      "danger-text": {
+        "role": "neutral",
+        "displayName": "Danger Text",
+        "canonical": "#ffb9b9",
+        "tonalRamp": [
+          "#4d3838",
+          "#805c5c",
+          "#b28282",
+          "#e6a6a6",
+          "#ffcaca",
+          "#ffdcdc",
+          "#ffeaea",
+          "#fff7f7"
+        ]
+      },
+      "danger-wash": {
+        "role": "neutral",
+        "displayName": "Danger Wash",
+        "canonical": "#3a1c1c",
+        "tonalRamp": [
+          "#110808",
+          "#1d0e0e",
+          "#291414",
+          "#341919",
+          "#6b5555",
+          "#9c8e8e",
+          "#c4bbbb",
+          "#e7e4e4"
+        ]
+      },
+      "logo-tile": {
+        "role": "neutral",
+        "displayName": "Logo Tile",
+        "canonical": "#e9ecef",
+        "tonalRamp": [
+          "#464748",
+          "#747678",
+          "#a3a5a7",
+          "#d2d4d7",
+          "#eef1f3",
+          "#f4f6f7",
+          "#f8f9fa",
+          "#fcfdfd"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Status page title."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Programme title in the detail pane."
+      },
+      "title-sm": {
+        "displayName": "Title small",
+        "purpose": "Wordmark and section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, nav, buttons; 15px root, 24px on TV."
+      },
+      "slot-title": {
+        "displayName": "Slot title",
+        "purpose": "Programme names in the sheet, semi-condensed."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Ruler day, table headers, summary terms."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Times, ticks, tags, badges, now tag; tabular."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Configuration names and values only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "popover",
+        "value": "0 12px 32px rgb(0 0 0 / 0.5)",
+        "purpose": "Search results list over the sheet."
+      },
+      {
+        "name": "bottom-sheet",
+        "value": "0 -16px 40px rgb(0 0 0 / 0.55)",
+        "purpose": "Detail pane rising from the bottom below 1280px."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-fade",
+        "value": "0.15s",
+        "purpose": "Background, border and colour changes on controls and chips."
+      },
+      {
+        "name": "slot-recede",
+        "value": "0.2s ease-out",
+        "purpose": "Slot fill changes when filtering or when a programme ends."
+      },
+      {
+        "name": "sheet-rise",
+        "value": "0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Bottom-sheet detail pane slide; all motion drops to 0s under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "639px"
+      },
+      {
+        "name": "status-two-column",
+        "value": "767px"
+      },
+      {
+        "name": "pane-as-sheet",
+        "value": "1279px"
+      },
+      {
+        "name": "tv",
+        "value": "html.tv (TV user agent), 24px root"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Quiet bordered control; toggles invert when pressed (day tabs).",
+      "html": "<div class=\"ds-row\"><button class=\"ds-btn\">Clear filter</button><button class=\"ds-btn\" aria-pressed=\"true\">Oggi</button><button class=\"ds-btn\">gio 5 nov</button></div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-row{display:flex;gap:.5rem;padding:1rem;background:var(--n1)} .ds-btn{display:inline-flex;align-items:center;height:2.25rem;padding:0 .875rem;border:1px solid var(--n4);border-radius:var(--radius);background:var(--n2);color:var(--n7);font:inherit;font-weight:600;cursor:pointer;transition:background-color .15s,border-color .15s,color .15s} .ds-btn:hover{background:var(--n3)} .ds-btn:focus-visible{outline:3px solid #fff;outline-offset:2px} .ds-btn[aria-pressed=\"true\"]{background:var(--n7);border-color:var(--n7);color:var(--n0)}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive cache action only.",
+      "html": "<div class=\"ds-row\"><button class=\"ds-btn-danger\">Clear cache</button></div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-row{padding:1rem;background:var(--n0)} .ds-btn-danger{height:2.25rem;padding:0 .875rem;border:1px solid #7d3a3a;border-radius:var(--radius);background:transparent;color:#ffb9b9;font:inherit;font-weight:600;cursor:pointer;transition:background-color .15s} .ds-btn-danger:hover{background:#3a1c1c} .ds-btn-danger:focus-visible{outline:3px solid #fff;outline-offset:2px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Ground-coloured field; border turns white on focus.",
+      "html": "<div class=\"ds-row\"><input class=\"ds-field\" type=\"search\" placeholder=\"Search titles\"></div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-row{padding:1rem;background:var(--n1)} .ds-field{width:16rem;height:2.25rem;padding:0 .75rem;border:1px solid var(--n4);border-radius:var(--radius);background:var(--n0);color:var(--n7);font:inherit} .ds-field::placeholder{color:var(--n5)} .ds-field:hover{border-color:var(--n5)} .ds-field:focus-visible{outline:3px solid #fff;outline-offset:0;border-color:#fff}"
+    },
+    {
+      "name": "Top Bar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Wordmark and text links; current page holds the rule-step fill.",
+      "html": "<header class=\"ds-bar\"><a class=\"ds-wordmark\" href=\"#\">HDHomeRun EPG</a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Guide</a><a href=\"#\">Status</a><a href=\"#\">API</a></nav></header>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-bar{display:flex;align-items:center;gap:1.5rem;min-height:3.5rem;padding:.5rem 1.25rem;background:var(--n1);border-bottom:1px solid var(--n3)} .ds-wordmark{font-size:1.125rem;font-weight:700;letter-spacing:-.01em;color:var(--n7);text-decoration:none} .ds-nav{display:flex;gap:.25rem} .ds-nav a{padding:.45rem .75rem;border-radius:var(--radius);color:var(--n6);font-weight:500;text-decoration:none;transition:background-color .15s,color .15s} .ds-nav a:hover{color:var(--n7);background:var(--n2)} .ds-nav a[aria-current=\"page\"]{color:var(--n7);background:var(--n3)} .ds-nav a:focus-visible{outline:3px solid #fff;outline-offset:2px}"
+    },
+    {
+      "name": "Genre Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Legend entry that works as the genre filter; selected fills with the genre.",
+      "html": "<div class=\"ds-legend\"><button class=\"ds-chip\" style=\"--fill:var(--g-news)\" aria-pressed=\"true\"><i></i>News</button><button class=\"ds-chip\" style=\"--fill:var(--g-drama)\"><i></i>Drama</button><button class=\"ds-chip\" style=\"--fill:var(--g-sports)\"><i></i>Sports</button></div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-legend{display:flex;gap:.25rem;padding:.375rem 1.25rem;background:var(--n0)} .ds-chip{display:inline-flex;align-items:center;gap:.5rem;height:2rem;padding:0 .75rem;border:0;border-radius:var(--radius);background:transparent;color:var(--n6);font:inherit;font-weight:500;cursor:pointer;transition:background-color .15s,color .15s} .ds-chip i{width:.75rem;height:.75rem;background:var(--fill)} .ds-chip:hover{background:var(--n2);color:var(--n7)} .ds-chip:focus-visible{outline:3px solid #fff;outline-offset:2px} .ds-chip[aria-pressed=\"true\"]{background:var(--fill);color:#fff} .ds-chip[aria-pressed=\"true\"] i{background:#fff}"
+    },
+    {
+      "name": "Programme Lane with Now-line",
+      "kind": "custom",
+      "refersTo": "slot",
+      "description": "Signature: flat genre slots sized by minutes, hatched gaps, the white now-line.",
+      "html": "<div class=\"ds-lane\"><button class=\"ds-slot ds-ended\" style=\"left:0;width:30%;--fill:var(--g-news)\"><b>Tg1</b><time>19:00</time></button><button class=\"ds-slot\" style=\"left:30%;width:45%;--fill:var(--g-drama)\"><b>Blue Bloods</b><time>19:30</time></button><button class=\"ds-slot\" style=\"left:80%;width:20%;--fill:var(--g-movies)\"><b>Film</b><time>21:00</time></button><span class=\"ds-now\"></span><span class=\"ds-tag\">19:45</span></div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-lane{position:relative;height:4.25rem;margin:1.5rem 1rem 1rem;background:repeating-linear-gradient(135deg,var(--n1) 0 .375rem,var(--n2) .375rem .5rem)} .ds-slot{position:absolute;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:.125rem;padding:0 .625rem 0 .5rem;border:0;border-radius:0;background:var(--fill);color:#fff;box-shadow:inset -2px 0 0 var(--n0);font:inherit;font-stretch:87.5%;text-align:left;cursor:pointer;transition:filter .15s} .ds-slot b{font-size:.875rem;font-weight:600} .ds-slot time{font-size:.75rem;font-variant-numeric:tabular-nums} .ds-slot:hover{filter:brightness(1.15)} .ds-slot:focus-visible{outline:3px solid #fff;outline-offset:-3px} .ds-ended{background:color-mix(in srgb,var(--fill) 45%,var(--n1))} .ds-now{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;pointer-events:none} .ds-tag{position:absolute;top:-1.4rem;left:50%;margin-left:2px;padding:.0625rem .375rem;border-radius:2px;background:#fff;color:var(--n0);font-size:.75rem;font-weight:700;line-height:1.25rem;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Channel Plate",
+      "kind": "custom",
+      "refersTo": "channel-plate",
+      "description": "Sticky channel identity: tabular number, logo well (hatched when missing), name.",
+      "html": "<div class=\"ds-plate\"><span class=\"ds-num\">10</span><span class=\"ds-logo\"></span><span class=\"ds-name\">Telelombardia</span></div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-plate{display:grid;grid-template-columns:2.25rem 3.5rem minmax(0,1fr);align-items:center;gap:.625rem;width:15rem;height:4.25rem;padding:0 .75rem 0 .5rem;background:var(--n1);border-right:1px solid var(--n3)} .ds-num{color:var(--n6);font-size:.875rem;text-align:right;font-variant-numeric:tabular-nums} .ds-logo{height:2.25rem;border-radius:3px;background:repeating-linear-gradient(135deg,var(--n1) 0 .375rem,var(--n2) .375rem .5rem)} .ds-name{overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap}"
+    },
+    {
+      "name": "Detail Pane",
+      "kind": "card",
+      "refersTo": "detail-pane",
+      "description": "Programme details beside the sheet; a bottom sheet below 1280px.",
+      "html": "<aside class=\"ds-pane\"><h2>L'eredità</h2><p class=\"ds-sub\">mer 4 nov · 18:40–20:00 · 80 min</p><p class=\"ds-meta\">Rai 1</p><div class=\"ds-tags\"><span class=\"ds-t ds-fill\" style=\"--fill:var(--g-news)\">News</span><span class=\"ds-t\">First airing</span></div><p class=\"ds-next\">Next on Rai 1: Tg1 · 20:00</p></aside>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-pane{width:22rem;padding:1.25rem;background:var(--n1);border-left:1px solid var(--n3)} .ds-pane h2{margin:0;font-size:1.5rem;line-height:1.15;letter-spacing:-.015em} .ds-sub{margin:.75rem 0 0} .ds-meta{margin:0;color:var(--n6)} .ds-tags{display:flex;gap:.375rem;margin-top:.875rem} .ds-t{padding:.125rem .5rem;border-radius:3px;background:var(--n3);color:var(--n7);font-size:.75rem;font-weight:600} .ds-fill{background:var(--fill);color:#fff} .ds-next{margin:1.25rem 0 0;padding-top:1rem;border-top:1px solid var(--n3);color:var(--n6);font-size:.875rem}"
+    },
+    {
+      "name": "State Badges",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Status-page badges: state colour text over a 14% wash of itself.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-badge ds-fresh\">Fresh</span><span class=\"ds-badge ds-mod\">Modified</span><span class=\"ds-dot\"></span>Online</div>",
+      "css": ":host{--n0:#0e1014;--n1:#15181d;--n2:#1c2026;--n3:#262b33;--n4:#3a414c;--n5:#7d8592;--n6:#a9b0ba;--n7:#eef0f3;--g-news:#2f5bb7;--g-drama:#6a45b8;--g-movies:#b23a3a;--g-sports:#22784d;--radius:4px;font-family:Archivo,ui-sans-serif,system-ui,sans-serif;font-size:15px;color:var(--n7);} .ds-row{display:flex;align-items:center;gap:.5rem;padding:1rem;background:var(--n1);font-weight:600} .ds-badge{padding:.0625rem .5rem;border-radius:3px;font-size:.75rem;font-weight:600} .ds-fresh{background:rgb(92 201 138 / .14);color:#5cc98a} .ds-mod{background:rgb(231 176 75 / .14);color:#e7b04b} .ds-dot{width:.625rem;height:.625rem;margin-left:1rem;border-radius:50%;background:#5cc98a}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Palinsesto Sheet",
+    "overview": "The interface is the broadcaster's schedule sheet, not an app of cards. Every programme is a rectangle filled flat with its genre's colour and sized exactly by its duration, laid on a night ground of eight neutral steps. The evening reads by colour before a single title is read, and one white vertical rule shows where the evening stands now. Everything that is not the schedule (top bar, legend, ruler, channel plates, the status page) is built from the same neutral ramp and stays quiet so the fills carry the screen.\n\nDensity is high and deliberate: rows are 4.25rem, the minute is the only horizontal unit, and labels are semi-condensed Archivo with tabular figures. Depth comes from tone steps and 1px rules, not from lifted surfaces. The same world scales from a phone to a TV browser driven by a remote; on TV the whole interface grows from a 15px to a 24px root, and every control stays reachable with arrow keys and Enter.\n\nThe rejected default is the category look: grey rounded cards on a slate grid with a blue accent.",
+    "keyCharacteristics": [
+      "One fixed eight-step neutral ramp is the only tonal scale.",
+      "Flat genre fills with white type; no borders, gradients or shadows on slots.",
+      "One white now-line with a white time tag; white is reserved for now, selection and focus.",
+      "Missing data is hatched, never blank.",
+      "Square to 4px corners.",
+      "Archivo throughout, semi-condensed in the cells, tabular figures for every time and number."
+    ],
+    "rules": [
+      {
+        "name": "The One Ramp Rule",
+        "body": "Every non-genre surface, border and text colour comes from the eight night steps. A new grey is a defect.",
+        "section": "colors"
+      },
+      {
+        "name": "The White Means Now Rule",
+        "body": "Pure white marks now, the current selection and keyboard focus. It is not decoration and not a brand accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Recede By Colour Rule",
+        "body": "Ended and filtered-out slots lose colour (mixed 45% toward the panel step, or dropped to the raised step), never contrast; their type stays legible.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Clock Rule",
+        "body": "Every time and number uses tabular figures so columns of times align down the sheet and tables.",
+        "section": "typography"
+      },
+      {
+        "name": "The Root Scale Rule",
+        "body": "Sizes are in rem off a 15px root so the TV root of 24px scales the whole interface at once. Do not set type in px.",
+        "section": "typography"
+      },
+      {
+        "name": "The Only Floaters Cast Rule",
+        "body": "A shadow is allowed only on a surface that overlays the sheet. Anything in the layout flow is flat.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do take every neutral from the eight night steps (`night-0` to `night-7`).",
+      "Do give every genre surface its colour through the genre class and its fill variable, with white type.",
+      "Do size anything on the sheet in minutes multiplied by the one time unit.",
+      "Do hatch missing data with the 135-degree panel and raised stripes.",
+      "Do use tabular figures for all times and counts.",
+      "Do keep every interactive element reachable by Tab and arrow keys, with the 3px white focus outline.",
+      "Do set sizes in rem so the 24px TV root scales the interface."
+    ],
+    "donts": [
+      "Don't put borders, gradients, rounded corners or shadows on programme slots.",
+      "Don't use white as a fill or decorative accent; it means now, selection or focus.",
+      "Don't dim ended or filtered slots by lowering text contrast; remove colour instead.",
+      "Don't introduce a radius above 4px or a new grey outside the ramp.",
+      "Don't add shadows to anything that does not float over the sheet.",
+      "Don't fall back to grey rounded cards on a slate grid with a blue accent."
+    ]
+  }
+}

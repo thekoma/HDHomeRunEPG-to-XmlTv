@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>{% block title %}HDHomeRun EPG{% endblock %}</title>
+    <link rel="preload" href="/static/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <script>
+      // TV browsers: scale the whole interface up for couch distance.
+      if (/SmartTV|SMART-TV|Tizen|Web0S|WebOS|NetCast|BRAVIA|HbbTV|CrKey|GoogleTV|Android TV|AFT[A-Z]/i.test(navigator.userAgent)) {
+        document.documentElement.classList.add("tv");
+      }
+    </script>
+  </head>
+  <body class="{% block body_class %}{% endblock %}">
+    <header class="bar">
+      <a class="wordmark" href="/guide">HDHomeRun EPG</a>
+      <nav class="nav" aria-label="Main">
+        <a href="/guide" {% if active == "guide" %}aria-current="page"{% endif %}>Guide</a>
+        <a href="/" {% if active == "status" %}aria-current="page"{% endif %}>Status</a>
+        <a href="/docs">API</a>
+      </nav>
+      <div class="bar-tools">{% block tools %}{% endblock %}</div>
+    </header>
+    {% block content %}{% endblock %}
+  </body>
+</html>

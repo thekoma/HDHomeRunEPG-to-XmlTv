@@ -1,11 +1,18 @@
 from fastapi import FastAPI, Response, BackgroundTasks, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import logging
 from contextlib import asynccontextmanager
 from hdhomerun_epg import HDHomeRunClient, XMLTVGenerator, settings
+from app.guide_view import build_guide_view
+import mimetypes
 import uvicorn
 import time
+
+# Slim images ship without a MIME table that knows web fonts.
+mimetypes.add_type("font/woff2", ".woff2")
 
 # Setup Logging
 logger = logging.getLogger("uvicorn")
@@ -29,6 +36,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="HDHomeRun EPG to XMLTV", version="2.0.0", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -79,144 +88,37 @@ def read_root(request: Request):
         )
 
     return templates.TemplateResponse(
-        request=request, name="dashboard.html", context={"config_items": config_items}
+        request=request,
+        name="dashboard.html",
+        context={
+            "active": "status",
+            "config_items": config_items,
+            "cache_ttl_seconds": settings.cache_ttl_seconds,
+        },
     )
 
 
 @app.get("/guide", response_class=HTMLResponse)
 def tv_guide(request: Request):
     """
-    Render a visual TV Guide using fetched EPG data.
+    Render the TV guide: every programme on one time scale, coloured by genre.
     """
     logger.info("📺 Rendering TV Guide")
+    context = {"active": "guide", "view": None, "error": None}
+    status_code = 200
     try:
-        # Fetch EPG Data (uses Cache + API)
         client = HDHomeRunClient(host=settings.host)
-        # Fetch EPG days as configured to allow full timeline scrolling
-        epg_data = client.fetch_epg_data(days=settings.epg_days, hours=4)
-
-        # Prepare data for template
-        channels = epg_data.get("channels", [])
-        programmes = epg_data.get("programmes", [])
-        programmes.sort(key=lambda x: x.get("StartTime", 0))
-
-        from collections import defaultdict
-        import datetime
-
-        now = time.time()
-        pixels_per_minute = 5  # Scale factor for width
-
-        # Filter out past programs
-        programmes = [p for p in programmes if p["EndTime"] > now]
-
-        grouped_programmes = defaultdict(list)
-        for p in programmes:
-            # Pre-calculate strings for template - DEFAULT to server time, will be overridden by JS
-            p["start_ts"] = p["StartTime"]
-            p["end_ts"] = p["EndTime"]
-            p["start_str"] = datetime.datetime.fromtimestamp(p["StartTime"]).strftime(
-                "%H:%M"
-            )
-            p["end_str"] = datetime.datetime.fromtimestamp(p["EndTime"]).strftime(
-                "%H:%M"
-            )
-
-            # --- Visual Width Calculation ---
-            # For programs currently playing, we only want to show the REMAINING portion
-            # starting from the left edge (Now).
-            visual_start = max(p["StartTime"], now)
-            visual_duration_seconds = p["EndTime"] - visual_start
-
-            # Width calculation
-            visual_duration_minutes = visual_duration_seconds / 60
-            p["width_px"] = int(visual_duration_minutes * pixels_per_minute)
-
-            # Progress calculation (still based on total duration)
-            total_duration = p["EndTime"] - p["StartTime"]
-            if now < p["StartTime"]:
-                p["progress_percent"] = 0
-            elif now > p["EndTime"]:
-                p["progress_percent"] = 100
-            else:
-                p["progress_percent"] = int(
-                    ((now - p["StartTime"]) / total_duration) * 100
-                )
-
-            grouped_programmes[p["GuideNumber"]].append(p)
-
-        # --- Gap Filling Logic ---
-        # Ensure programs are aligned to the timeline by inserting spacer blocks for gaps.
-        # This fixes the issue where gaps cause subsequent programs to shift left (desync),
-        # leaving the end of the timeline empty.
-
-        for guide_number, progs in grouped_programmes.items():
-            # Ensure sorted
-            progs.sort(key=lambda x: x["StartTime"])
-
-            filled_progs = []
-            # Cursor tracks the end of the last added element (starting at Now)
-            cursor = now
-
-            for p in progs:
-                # Calculate gap from cursor to program start
-                # We only care if program starts after cursor.
-                if p["StartTime"] > cursor:
-                    gap_seconds = p["StartTime"] - cursor
-                    # Only render gap if significant (> 1 minute visual)
-                    if (
-                        gap_seconds > 0
-                    ):  # render even small gaps to maintain perfect sync
-                        gap_minutes = gap_seconds / 60
-                        gap_px = int(gap_minutes * pixels_per_minute)
-                        if gap_px > 0:
-                            filled_progs.append(
-                                {
-                                    "is_gap": True,
-                                    "width_px": gap_px,
-                                    "StartTime": cursor,
-                                    "EndTime": p["StartTime"],
-                                    "title": "No Data",  # Helper
-                                }
-                            )
-
-                filled_progs.append(p)
-                # update cursor to end of this program
-                cursor = max(cursor, p["EndTime"])
-
-            # Optional: Fill remainder of timeline
-            # if cursor < timeline_end_time:
-            #     gap_seconds = timeline_end_time - cursor
-            #     gap_minutes = gap_seconds / 60
-            #     gap_px = int(gap_minutes * pixels_per_minute)
-            #     if gap_px > 0:
-            #         filled_progs.append({"is_gap": True, "width_px": gap_px})
-
-            grouped_programmes[guide_number] = filled_progs
-
-        # Group everything nicely
-        grouped_data = {}
-        for ch in channels:
-            gn = ch.get("GuideNumber")
-            grouped_data[gn] = {
-                "channel": ch,
-                "programmes": grouped_programmes.get(gn, []),
-            }
-
-        return templates.TemplateResponse(
-            request=request,
-            name="guide.html",
-            context={
-                "channels": channels,
-                "grouped_data": grouped_data,
-                "epg_days": settings.epg_days,
-            },
+        epg_data = client.fetch_epg_data(
+            days=settings.epg_days, hours=settings.epg_hours
         )
-
+        context["view"] = build_guide_view(epg_data, time.time())
     except Exception as e:
         logger.error(f"Error rendering guide: {e}")
-        return HTMLResponse(
-            content=f"<h1>Error rendering guide</h1><p>{e}</p>", status_code=500
-        )
+        context["error"] = str(e)
+        status_code = 500
+    return templates.TemplateResponse(
+        request=request, name="guide.html", context=context, status_code=status_code
+    )
 
 
 @app.get("/epg.xml")
