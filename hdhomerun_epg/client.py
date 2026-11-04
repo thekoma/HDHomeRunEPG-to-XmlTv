@@ -4,15 +4,11 @@ import random
 import time
 import xml.etree.ElementTree as ET
 import requests
-import urllib3
 import pytz
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
 from .config import settings
 from .cache import CacheManager
 from .official import OFFICIAL_XMLTV_URL, enrich, parse_details
-
-# Suppress only the single warning from urllib3 needed.
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +17,18 @@ OFFICIAL_FEED = "official_xmltv"
 # random time: https://info.hdhomerun.com/info/dvr:xmltv
 OFFICIAL_REFRESH_SECONDS = (20 * 3600, 28 * 3600)
 OFFICIAL_RETRY_SECONDS = 3600
+# guide.php answers 400 Bad Request for a Start past the end of the guide it
+# offers, such as 48 hours ahead on a tuner without a DVR subscription.
+END_OF_GUIDE_STATUS = 400
 
 
 class HDHomeRunClient:
+    # The first Start that guide.php refused as past the end of its guide, and
+    # when: (Start, Unix time). The guide window moves forward with the clock,
+    # so that Start is asked again once a chunk's time has passed. Kept for
+    # the process, so the requests in between skip the call.
+    _guide_end: Optional[Tuple[int, float]] = None
+
     def __init__(self, host: str):
         self.host = host
         self.device_auth: Optional[str] = None
@@ -39,7 +44,7 @@ class HDHomeRunClient:
 
             if "DeviceAuth" in data:
                 self.device_auth = data["DeviceAuth"]
-                logger.info(f"🔑 Discovered device auth: {self.device_auth}")
+                logger.info("🔑 HDHomeRun device discovered")
                 return self.device_auth
 
             for key in data:  # Fallback if structure is different
@@ -57,7 +62,7 @@ class HDHomeRunClient:
         if not self.device_auth:
             self.discover_device_auth()
 
-        logger.info(f"📺 Fetching HDHomeRun Web API Lineup for auth {self.device_auth}")
+        logger.info("📺 Fetching HDHomeRun lineup")
         url = f"http://{self.host}/lineup.json"
         try:
             response = requests.get(url, timeout=10)
@@ -67,8 +72,18 @@ class HDHomeRunClient:
             logger.error(f"🚨 Error fetching channels: {e}")
             raise
 
+    @classmethod
+    def _known_guide_end(cls, now: float, chunk_seconds: int) -> Optional[int]:
+        """The Start refused by an earlier 400, if less than a chunk ago."""
+        if cls._guide_end is None:
+            return None
+        refused_start, refused_at = cls._guide_end
+        if now - refused_at >= chunk_seconds:
+            return None
+        return refused_start
+
     def fetch_epg_data(self, days: int, hours: int) -> Dict[str, Any]:
-        """Fetch EPG data for a specific channel via POST to HDHomeRun API."""
+        """Fetch guide data for all tuned channels."""
         if not self.device_auth:
             self.discover_device_auth()
 
@@ -80,6 +95,7 @@ class HDHomeRunClient:
             logger.info("⚠️ Caching is DISABLED via configuration.")
 
         epg_data = {"channels": [], "programmes": []}
+        seen_programmes = set()
 
         url = f"https://api.hdhomerun.com/api/guide.php?DeviceAuth={self.device_auth}"
 
@@ -95,21 +111,23 @@ class HDHomeRunClient:
             aligned_timestamp, tz=pytz.UTC
         )
 
-        # Log device auth used (partially masked for security)
-        masked_auth = (
-            self.device_auth[:4] + "***" + self.device_auth[-4:]
-            if self.device_auth and len(self.device_auth) > 8
-            else "***"
-        )
-        logger.info(f"🚀 Fetching EPG using DeviceAuth: {masked_auth}")
+        logger.info("🚀 Fetching guide data")
         # End with the desired number of days
         end_time = next_start_date + datetime.timedelta(days=days)
+        first_start = int(aligned_timestamp)
+        known_end = self._known_guide_end(timestamp, chunk_seconds)
+        # A fetched chunk is cached once the guide is known to go on past it:
+        # the chunk that runs past the end of the guide misses part of its span.
+        pending_chunk = None
 
         # Requests session for efficiency
         session = requests.Session()
         try:
             while next_start_date < end_time:
                 url_start_date = int(next_start_date.timestamp())
+                if known_end and url_start_date >= known_end:
+                    logger.info(f"🏁 The guide ends before {next_start_date}.")
+                    break
                 fetch_url = f"{url}&Start={url_start_date}"
 
                 logger.debug(
@@ -133,35 +151,42 @@ class HDHomeRunClient:
                         )
 
                     try:
-                        # Legacy script used ssl._create_unverified_context(), so we disable verification to match behavior.
-                        # Also HDHomeRun API seems to be picky about User-Agent or SSL specifics sometimes?
-                        # We will try to mimic a standard request but disabling verification is key if they use legacy certs.
-                        response = session.get(fetch_url, timeout=30, verify=False)
+                        response = session.get(fetch_url, timeout=30, verify=True)
                         response.raise_for_status()
                         epg_segment = response.json()
-
-                        # Save to cache if enabled
-                        if cache:
-                            chunk_end_time = int(
-                                (
-                                    next_start_date + datetime.timedelta(hours=hours)
-                                ).timestamp()
-                            )
-                            cache.save_chunk(
-                                url_start_date, chunk_end_time, epg_segment
-                            )
-
                     except requests.RequestException as e:
-                        logger.error(f"🚨 Request failed for {fetch_url}: {e}")
-                        if hasattr(e, "response") and e.response is not None:
-                            logger.error(f"🚨 Response Body: {e.response.text}")
-                        # Skip this segment or break? Original continued?
-                        # Original raised generic Exception caught outside.
-                        raise e
+                        status = getattr(e.response, "status_code", None)
+                        if (
+                            status == END_OF_GUIDE_STATUS
+                            and url_start_date > first_start
+                        ):
+                            logger.info(
+                                f"🏁 The guide ends before {next_start_date}: "
+                                "guide.php has no data that far ahead."
+                            )
+                            HDHomeRunClient._guide_end = (url_start_date, timestamp)
+                            break
+                        logger.error(
+                            f"🚨 Guide provider request failed: {type(e).__name__}"
+                        )
+                        # The upstream exception contains the DeviceAuth URL.
+                        raise RuntimeError("Guide provider request failed") from None
+                    if pending_chunk:
+                        cache.save_chunk(*pending_chunk)
+                    if cache:
+                        chunk_end_time = int(
+                            (
+                                next_start_date + datetime.timedelta(hours=hours)
+                            ).timestamp()
+                        )
+                        pending_chunk = (url_start_date, chunk_end_time, epg_segment)
                 else:
                     logger.info(
                         f"✅ Cache hit for {next_start_date} (Key: {url_start_date})."
                     )
+                    if pending_chunk:
+                        cache.save_chunk(*pending_chunk)
+                        pending_chunk = None
 
                 logger.info(
                     f"⚙️ Processing ({next_start_date} - {next_start_date + datetime.timedelta(hours=hours)})"
@@ -208,27 +233,28 @@ class HDHomeRunClient:
                         epg_data["channels"].append(channel_info)
 
                     for programme in programmes_list:
-                        # Check duplicate
-                        # Optimized check using a set of signatures could be better but sticking to logic
-                        is_duplicate = any(
-                            epg["StartTime"] == programme["StartTime"]
-                            and epg["Title"] == programme["Title"]
-                            and epg.get("GuideNumber")
-                            == channel_epg_segment["GuideNumber"]
-                            for epg in epg_data["programmes"]
+                        signature = (
+                            programme["StartTime"],
+                            programme["Title"],
+                            channel_epg_segment["GuideNumber"],
                         )
-
-                        if is_duplicate:
+                        if signature in seen_programmes:
                             continue
+                        seen_programmes.add(signature)
 
                         programme["GuideNumber"] = channel_epg_segment["GuideNumber"]
                         epg_data["programmes"].append(programme)
 
                 next_start_date += datetime.timedelta(hours=hours)
+            else:
+                # The requested days ended inside the guide: the last chunk is whole.
+                if pending_chunk:
+                    cache.save_chunk(*pending_chunk)
 
         except Exception as e:
             logger.error(f"Error fetching EPG: {e}")
-            # Return what we have
+            # A failed fetch must not replace the last good guide with partial XML.
+            raise RuntimeError("Guide data is temporarily unavailable") from None
 
         # The official feed is fetched about once a day, so it needs the cache.
         if cache and epg_data["programmes"]:

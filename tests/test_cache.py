@@ -82,3 +82,23 @@ def test_clear_cache_clears_feeds(temp_db_path):
     cm.save_feed("official", {}, expires_at=1)
     cm.clear_cache()
     assert cm.get_feed("official") is None
+
+
+def test_cache_prunes_expired_chunks(temp_db_path, monkeypatch):
+    now = 1_000_000
+    monkeypatch.setattr(time, "time", lambda: now)
+    cm = CacheManager(temp_db_path)
+    for start, end in [
+        (now - 100_000, now - 86_401),
+        (now - 90_000, now - 86_400),
+        (now - 1000, now + 1000),
+        (now + 1000, now + 2000),
+    ]:
+        cm.save_chunk(start, end, [{"program": str(start)}])
+
+    cm = CacheManager(temp_db_path)
+    assert cm.get_chunk(now - 100_000) is None
+    for start in [now - 90_000, now - 1000, now + 1000]:
+        assert cm.get_chunk(start) == [{"program": str(start)}]
+    with sqlite3.connect(temp_db_path) as conn:
+        assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok"

@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from app.main import app
 from hdhomerun_epg.config import settings
 
@@ -78,3 +78,38 @@ def test_tv_guide_endpoint(monkeypatch):
     assert "text/html" in response.headers["content-type"]
     assert "TV Guide" in response.text
     assert "Test Prog" in response.text
+
+
+def test_get_epg_partial_failure(monkeypatch, caplog):
+    import requests
+    from hdhomerun_epg.client import HDHomeRunClient
+
+    monkeypatch.setattr(settings, "epg_days", 1)
+    monkeypatch.setattr(settings, "epg_hours", 12)
+    monkeypatch.setattr(settings, "cache_enabled", False)
+    monkeypatch.setattr(
+        HDHomeRunClient,
+        "discover_device_auth",
+        lambda self: setattr(self, "device_auth", "PRIVATE_DEVICE_AUTH"),
+    )
+    monkeypatch.setattr(
+        HDHomeRunClient, "fetch_channels", lambda self: [{"GuideNumber": "5.1"}]
+    )
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {
+            "GuideNumber": "5.1",
+            "Guide": [{"StartTime": 100, "EndTime": 200, "Title": "Test Show"}],
+        }
+    ]
+    with patch("requests.Session") as mock_session_cls:
+        mock_session = mock_session_cls.return_value
+        mock_session.get.side_effect = [
+            mock_response,
+            requests.Timeout("https://provider.test/?DeviceAuth=PRIVATE_DEVICE_AUTH"),
+        ]
+        response = client.get("/epg.xml")
+    assert response.status_code == 500
+    assert "<tv" not in response.text
+    assert "PRIVATE_DEVICE_AUTH" not in response.text
+    assert "PRIVATE_DEVICE_AUTH" not in caplog.text

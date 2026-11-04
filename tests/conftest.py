@@ -17,6 +17,16 @@ def temp_db_path(tmp_path):
     return str(d)
 
 
+@pytest.fixture(autouse=True)
+def forget_guide_end():
+    """The end of the guide is remembered per process; keep tests independent."""
+    from hdhomerun_epg.client import HDHomeRunClient
+
+    HDHomeRunClient._guide_end = None
+    yield
+    HDHomeRunClient._guide_end = None
+
+
 # A trimmed copy of SiliconDust's XMLTV feed: one station on two channel numbers.
 OFFICIAL_FEED = b"""<?xml version="1.0" encoding="utf-8"?>
 <tv source-info-name="HDHomeRun">

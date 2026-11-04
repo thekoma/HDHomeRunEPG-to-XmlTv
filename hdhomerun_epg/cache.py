@@ -39,6 +39,10 @@ class CacheManager:
                         expires_at INTEGER
                     )
                 """)
+                conn.execute(
+                    "DELETE FROM epg_chunks WHERE end_time < ?",
+                    (int(time.time()) - 86400,),
+                )
         except Exception as e:
             logger.error(f"🚨 Failed to initialize cache DB: {e}")
 
