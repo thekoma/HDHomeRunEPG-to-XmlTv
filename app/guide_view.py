@@ -5,6 +5,8 @@ Every programme is placed on one fixed time scale, in minutes from an origin
 so the same data serves every screen size.
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 HALF_HOUR = 1800
