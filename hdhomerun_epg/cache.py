@@ -28,6 +28,15 @@ class CacheManager:
                 conn.execute(
                     "CREATE INDEX IF NOT EXISTS idx_end_time ON epg_chunks (end_time)"
                 )
+                # Whole feeds refreshed on their own schedule, such as
+                # SiliconDust's XMLTV feed.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS feeds (
+                        name TEXT PRIMARY KEY,
+                        data BLOB,
+                        expires_at INTEGER
+                    )
+                """)
         except Exception as e:
             logger.error(f"🚨 Failed to initialize cache DB: {e}")
 
@@ -88,12 +97,41 @@ class CacheManager:
         except Exception as e:
             logger.error(f"🚨 Cache write error: {e}")
 
+    def get_feed(self, name: str) -> dict[str, Any] | None:
+        """Return a cached feed as {"data", "expires_at"}, whether expired or not."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                row = conn.execute(
+                    "SELECT data, expires_at FROM feeds WHERE name = ?", (name,)
+                ).fetchone()
+            if row:
+                return {
+                    "data": json.loads(gzip.decompress(row[0])),
+                    "expires_at": row[1],
+                }
+        except (sqlite3.Error, OSError, ValueError) as e:
+            logger.error(f"🚨 Cache read error for feed {name}: {e}")
+        return None
+
+    def save_feed(self, name: str, data: Any, expires_at: int) -> None:
+        """Store a feed until expires_at (Unix seconds)."""
+        try:
+            compressed = gzip.compress(json.dumps(data).encode("utf-8"))
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO feeds (name, data, expires_at) VALUES (?, ?, ?)",
+                    (name, compressed, expires_at),
+                )
+        except (sqlite3.Error, TypeError, ValueError) as e:
+            logger.error(f"🚨 Cache write error for feed {name}: {e}")
+
     def clear_cache(self):
         """Clear all cached data."""
         try:
             # internal connection to allow VACUUM (cannot run in transaction)
             with sqlite3.connect(self.db_path, isolation_level=None) as conn:
                 conn.execute("DELETE FROM epg_chunks")
+                conn.execute("DELETE FROM feeds")
                 conn.execute("VACUUM")
             logger.info("🗑️ Cache cleared successfully")
         except Exception as e:

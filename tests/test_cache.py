@@ -63,3 +63,22 @@ def test_clear_cache(temp_db_path):
     with sqlite3.connect(temp_db_path) as conn:
         cursor = conn.execute("SELECT count(*) FROM epg_chunks")
         assert cursor.fetchone()[0] == 0
+
+
+def test_save_and_get_feed(temp_db_path):
+    cm = CacheManager(temp_db_path)
+    assert cm.get_feed("official") is None
+
+    cm.save_feed("official", {"3|100": {"Synopsis": "x"}}, expires_at=12345)
+
+    assert cm.get_feed("official") == {
+        "data": {"3|100": {"Synopsis": "x"}},
+        "expires_at": 12345,
+    }
+
+
+def test_clear_cache_clears_feeds(temp_db_path):
+    cm = CacheManager(temp_db_path)
+    cm.save_feed("official", {}, expires_at=1)
+    cm.clear_cache()
+    assert cm.get_feed("official") is None

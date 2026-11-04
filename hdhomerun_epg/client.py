@@ -1,16 +1,26 @@
 import datetime
 import logging
+import random
+import time
+import xml.etree.ElementTree as ET
 import requests
 import urllib3
 import pytz
 from typing import List, Dict, Optional, Any
 from .config import settings
 from .cache import CacheManager
+from .official import OFFICIAL_XMLTV_URL, enrich, parse_details
 
 # Suppress only the single warning from urllib3 needed.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
+
+OFFICIAL_FEED = "official_xmltv"
+# SiliconDust asks for this feed to be refreshed every 20 to 28 hours, at a
+# random time: https://info.hdhomerun.com/info/dvr:xmltv
+OFFICIAL_REFRESH_SECONDS = (20 * 3600, 28 * 3600)
+OFFICIAL_RETRY_SECONDS = 3600
 
 
 class HDHomeRunClient:
@@ -220,4 +230,48 @@ class HDHomeRunClient:
             logger.error(f"Error fetching EPG: {e}")
             # Return what we have
 
+        # The official feed is fetched about once a day, so it needs the cache.
+        if cache and epg_data["programmes"]:
+            epg_data["programmes"] = enrich(
+                epg_data["programmes"], self.fetch_official_details(cache)
+            )
+
         return epg_data
+
+    def fetch_official_details(self, cache: CacheManager) -> dict[str, Any]:
+        """
+        Programme details from SiliconDust's own XMLTV feed, kept in the cache
+        for 20 to 28 hours. Without the feed, programmes keep guide.php's details.
+        """
+        cached = cache.get_feed(OFFICIAL_FEED)
+        if cached and cached["expires_at"] > time.time():
+            return cached["data"]
+
+        old_details = cached["data"] if cached else {}
+        try:
+            response = requests.get(
+                OFFICIAL_XMLTV_URL, params={"DeviceAuth": self.device_auth}, timeout=60
+            )
+            response.raise_for_status()
+            details = parse_details(response.content)
+        except (requests.RequestException, ET.ParseError, ValueError, TypeError) as e:
+            # Request errors quote the URL, which carries the DeviceAuth.
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            logger.warning(
+                f"⚠️ SiliconDust's XMLTV feed is unavailable ({type(e).__name__}"
+                f"{f' {status}' if status else ''}); retrying in an hour."
+            )
+            cache.save_feed(
+                OFFICIAL_FEED, old_details, int(time.time()) + OFFICIAL_RETRY_SECONDS
+            )
+            return old_details
+
+        logger.info(
+            f"📰 Fetched SiliconDust's XMLTV feed: {len(details)} programme entries"
+        )
+        cache.save_feed(
+            OFFICIAL_FEED,
+            details,
+            int(time.time()) + random.randint(*OFFICIAL_REFRESH_SECONDS),
+        )
+        return details

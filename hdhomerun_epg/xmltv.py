@@ -90,12 +90,24 @@ class XMLTVGenerator:
                     programme_data["OriginalAirdate"]
                 )
 
-            for filter_item in programme_data.get("Filter", []):
-                ET.SubElement(programme, "category").text = filter_item
+            categories = (
+                *programme_data.get("Filter", []),
+                *programme_data.get("Categories", []),
+            )
+            for category in dict.fromkeys(categories):
+                ET.SubElement(programme, "category").text = category
+
+            if "Language" in programme_data:
+                ET.SubElement(programme, "language").text = programme_data["Language"]
 
             images = (programme_data.get("ImageURL"), programme_data.get("PosterURL"))
             for src in dict.fromkeys(i for i in images if i):
                 ET.SubElement(programme, "icon", src=src)
+
+            if "ProgramID" in programme_data:
+                ET.SubElement(
+                    programme, "episode-num", system="dd_progid"
+                ).text = programme_data["ProgramID"]
 
             if "EpisodeNumber" in programme_data:
                 self._add_episode_num(programme, programme_data["EpisodeNumber"])
@@ -105,6 +117,10 @@ class XMLTVGenerator:
                 ET.SubElement(video, "quality").text = "HDTV"
 
             self._handle_new_or_previously_shown(programme, programme_data)
+
+            if "StarRating" in programme_data:
+                rating = ET.SubElement(programme, "star-rating")
+                ET.SubElement(rating, "value").text = programme_data["StarRating"]
 
         except Exception as e:
             logger.error(

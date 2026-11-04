@@ -40,7 +40,8 @@ graph LR
 
 1.  **Discovery**: Finds your HDHomeRun device on the local network.
 2.  **Fetch & Cache**: Downloads the schedule in small chunks and saves it to a local database.
-3.  **Serve**: Generates a standard `epg.xml` file that any XMLTV-compatible software can ingest.
+3.  **Enrich**: Every 20 to 28 hours, as SiliconDust asks, downloads SiliconDust's own XMLTV feed and adds the descriptions, categories, language and programme ids that the schedule lacks. This needs the cache: with `HDHOMERUN_CACHE_ENABLED=False`, programmes keep the schedule's details only.
+4.  **Serve**: Generates a standard `epg.xml` file that any XMLTV-compatible software can ingest.
 
 
 ## 📊 Project Status
