@@ -3,7 +3,7 @@
 ![CI Status](https://img.shields.io/github/actions/workflow/status/thekoma/HDHomeRunEPG-to-XmlTv/ci.yml?branch=main&style=flat-square&label=CI)
 ![GitHub Release](https://img.shields.io/github/v/release/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square&label=Release)
 ![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fthekoma%2Fhdhomerunepgxml-blue?style=flat-square&logo=docker&logoColor=white)
-![Python Version](https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square&logo=python&logoColor=white)
+![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white)
 ![License](https://img.shields.io/github/license/thekoma/HDHomeRunEPG-to-XmlTv?style=flat-square)
 ![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)
 
@@ -18,7 +18,7 @@ Refactored Python library and FastAPI service to fetch EPG from HDHomeRun device
 *   👀 **Web Interface**: Includes a beautiful built-in TV Guide to check what's on without opening your media player.
 
 **Technical Highlights:**
-*   🐍 **Modern Stack**: Built with Python 3.9+ and FastAPI.
+*   🐍 **Modern Stack**: Built with Python 3.10+ and FastAPI (the Docker image uses Python 3.12).
 *   💾 **Smart Caching**: SQLite-based caching with 24h TTL to minimize calls to the HDHomeRun hardware.
 *   🐳 **Docker First**: Ready-to-use container for easy deployment.
 *   🔍 **Observability**: Prometheus-ready metrics and detailed logs.
@@ -108,9 +108,9 @@ The application is fully configurable via Environment Variables.
 
 ### 🛠️ Local Development
 
-1. Install dependencies:
+1. Install dependencies (runtime and dev; `requirements-dev.txt` does not include the runtime requirements, so install both):
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements.txt -r requirements-dev.txt
    ```
 
 2. Run the service:
