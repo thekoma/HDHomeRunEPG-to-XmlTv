@@ -63,3 +63,23 @@ def test_clear_cache(temp_db_path):
     with sqlite3.connect(temp_db_path) as conn:
         cursor = conn.execute("SELECT count(*) FROM epg_chunks")
         assert cursor.fetchone()[0] == 0
+
+
+def test_cache_prunes_expired_chunks(temp_db_path, monkeypatch):
+    now = 1_000_000
+    monkeypatch.setattr(time, "time", lambda: now)
+    cm = CacheManager(temp_db_path)
+    for start, end in [
+        (now - 100_000, now - 86_401),
+        (now - 90_000, now - 86_400),
+        (now - 1000, now + 1000),
+        (now + 1000, now + 2000),
+    ]:
+        cm.save_chunk(start, end, [{"program": str(start)}])
+
+    cm = CacheManager(temp_db_path)
+    assert cm.get_chunk(now - 100_000) is None
+    for start in [now - 90_000, now - 1000, now + 1000]:
+        assert cm.get_chunk(start) == [{"program": str(start)}]
+    with sqlite3.connect(temp_db_path) as conn:
+        assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok"
