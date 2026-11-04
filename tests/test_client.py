@@ -393,3 +393,19 @@ def test_official_feed_failure_keeps_old_details_and_hides_device_auth(
     # Retry in an hour, not on every request.
     expires_in = cache.get_feed("official_xmltv")["expires_at"] - time.time()
     assert 3600 - 5 <= expires_in <= 3600
+
+
+def test_official_feed_is_skipped_without_a_working_cache(
+    guide_client, tmp_path, monkeypatch
+):
+    from hdhomerun_epg.config import settings
+
+    # Without a working cache, the feed would be downloaded on every request.
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    monkeypatch.setattr(settings, "cache_db_path", str(tmp_path / "missing" / "epg.db"))
+    with patch("requests.Session") as mock_session_cls:
+        mock_session_cls.return_value.get.side_effect = [guide_response(100)]
+        result = guide_client.fetch_epg_data(days=1, hours=24)
+
+    assert len(result["programmes"]) == 1
+    guide_client.fetch_official_details.assert_not_called()

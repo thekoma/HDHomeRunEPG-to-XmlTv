@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 class CacheManager:
     def __init__(self, db_path: str = "epg_cache.db"):
         self.db_path = db_path
+        # False when the database cannot be opened or written, e.g. a path the
+        # process has no permission for. Every read then misses.
+        self.available = False
         self._init_db()
 
     def _init_db(self):
@@ -43,6 +46,7 @@ class CacheManager:
                     "DELETE FROM epg_chunks WHERE end_time < ?",
                     (int(time.time()) - 86400,),
                 )
+            self.available = True
         except Exception as e:
             logger.error(f"🚨 Failed to initialize cache DB: {e}")
 

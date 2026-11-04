@@ -256,8 +256,9 @@ class HDHomeRunClient:
             # A failed fetch must not replace the last good guide with partial XML.
             raise RuntimeError("Guide data is temporarily unavailable") from None
 
-        # The official feed is fetched about once a day, so it needs the cache.
-        if cache and epg_data["programmes"]:
+        # The official feed is fetched about once a day, so it needs a cache
+        # that works: without one it would be downloaded on every request.
+        if cache and cache.available and epg_data["programmes"]:
             epg_data["programmes"] = enrich(
                 epg_data["programmes"], self.fetch_official_details(cache)
             )

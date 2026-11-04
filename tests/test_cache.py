@@ -102,3 +102,8 @@ def test_cache_prunes_expired_chunks(temp_db_path, monkeypatch):
         assert cm.get_chunk(start) == [{"program": str(start)}]
     with sqlite3.connect(temp_db_path) as conn:
         assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+
+
+def test_cache_reports_whether_it_can_be_used(tmp_path):
+    assert CacheManager(str(tmp_path / "epg.db")).available
+    assert not CacheManager(str(tmp_path / "missing" / "epg.db")).available
