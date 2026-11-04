@@ -83,20 +83,18 @@ def read_root(request: Request):
         value = getattr(settings, field_name)
         default = field_info.default
         is_default = value == default
-        config_items.append({
-            "name": field_name,
-            "value": value,
-            "is_default": is_default
-        })
+        config_items.append(
+            {"name": field_name, "value": value, "is_default": is_default}
+        )
 
     return templates.TemplateResponse(
-        request=request, 
-        name="dashboard.html", 
+        request=request,
+        name="dashboard.html",
         context={
             "active": "status",
             "config_items": config_items,
             "cache_ttl_seconds": settings.cache_ttl_seconds,
-        }
+        },
     )
 
 
