@@ -76,10 +76,11 @@
     const now = nowMinutes();
     sheet.style.setProperty("--now", now.toFixed(2));
     nowTag.textContent = time.format(Date.now());
-    // The now tag hides the tick labels it would overlap.
+    // The now tag hides the tick labels it overlaps, on either side of it.
+    const tag = nowTag.getBoundingClientRect();
     for (const tick of ticks.querySelectorAll(".tick")) {
-      const m = Number(tick.style.getPropertyValue("--m"));
-      tick.classList.toggle("covered", m <= now && now - m < 15);
+      const label = tick.getBoundingClientRect();
+      tick.classList.toggle("covered", label.left < tag.right && label.right > tag.left);
     }
     for (const s of slots) {
       const start = Number(s.dataset.s);
@@ -316,5 +317,14 @@
   setInterval(placeNow, 30000);
   syncDay();
   const firstAiring = rows[0] && [...rows[0].querySelectorAll(".slot")].find((s) => !s.classList.contains("ended"));
-  if (firstAiring || slots[0]) select(firstAiring || slots[0]);
+  // The wide layout shows the first programme on air in the pane. On narrow
+  // screens the pane is closed, so that programme is only where the keyboard
+  // starts, without a selection ring.
+  const start = firstAiring || slots[0];
+  if (start && narrow.matches) {
+    current = start;
+    start.tabIndex = 0;
+  } else if (start) {
+    select(start);
+  }
 })();
