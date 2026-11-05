@@ -4,6 +4,7 @@
 !*.md
 !*.txt
 !*.png
+!*.webp
 !*.html
 !.gitignore
 !.vscode/
@@ -20,3 +21,12 @@ build/
 __pycache__/
 *.pyc
 !renovate.json
+!*.css
+!*.js
+!*.woff2
+!.impeccable/
+!.impeccable/**
+.impeccable/mocks/
+.impeccable/hook.cache.json
+!*.svg
+.impeccable/review/

@@ -1,50 +1,83 @@
-applicationName: hdhomerun-epg
-deployment:
-  enabled: true
-  replicas: 1
-  image:
-    repository: ghcr.io/thekoma/hdhomerunepgxml
-    tag: latest
-    pullPolicy: Always
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/values.schema.json
+#
+# Values for the bjw-s app-template chart (5.3.0):
+#   helm repo add bjw-s https://bjw-s-labs.github.io/helm-charts
+#   helm upgrade --install hdhomerun-epg bjw-s/app-template --version 5.3.0 \
+#     --namespace media --create-namespace --values deploy/helm/values.yaml
+controllers:
+  main:
+    containers:
+      main:
+        image:
+          repository: ghcr.io/thekoma/hdhomerunepgxml
+          tag: latest
+          pullPolicy: Always
+        env:
+          # The address of your HDHomeRun tuner.
+          HDHOMERUN_HOST: 10.0.1.2
+          HDHOMERUN_DEBUG_MODE: "off"
+        probes:
+          liveness:
+            enabled: true
+            type: HTTP
+            path: /healthcheck
+            port: 8000
+          readiness:
+            enabled: true
+            type: HTTP
+            path: /healthcheck
+            port: 8000
+        resources:
+          requests:
+            cpu: 50m
+            memory: 192Mi
+          limits:
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
 
-  ports:
-    - name: http
-      containerPort: 8000
-      protocol: TCP
-
-  # Persistence for SQLite cache
-  volumes:
-    data:
-      emptyDir: {} # Override with pvc in production if needed, or use persistence section
-
-  volumeMounts:
-    data:
-      mountPath: /data
-
-  env:
-    HDHOMERUN_HOST:
-      value: "10.0.1.2" # Change this
-    HDHOMERUN_CACHE_DB_PATH:
-      value: "/data/epg_cache.db"
-    HDHOMERUN_CACHE_ENABLED:
-      value: "true"
-    HDHOMERUN_DEBUG_MODE:
-      value: "off"
+defaultPodOptions:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroup: 1001
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
 
 service:
-  enabled: true
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8000
-      protocol: TCP
+  main:
+    controller: main
+    ports:
+      http:
+        port: 8000
 
+persistence:
+  # The SQLite cache (/data/epg_cache.db). It refills on its own, so an
+  # emptyDir is enough. To keep it across restarts, use a
+  # persistentVolumeClaim instead.
+  data:
+    type: emptyDir
+  # SQLite writes temporary files here, for example when the cache is cleared.
+  tmp:
+    type: emptyDir
+
+# The service has no authentication. Keep it on your LAN, or put it behind an
+# authenticating proxy before you expose it.
 ingress:
-  enabled: false
-  # Enable and configure in production
-  # ingressClassName: nginx
-  # hosts:
-  #   - host: epg.local
-  #     paths:
-  #       - path: /
-  #         pathType: Prefix
+  main:
+    enabled: false
+    className: nginx
+    hosts:
+      - host: tvguide.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              identifier: main
+              port: http

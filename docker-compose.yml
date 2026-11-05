@@ -10,3 +10,6 @@ services:
       - HDHOMERUN_EPG_HOURS=3
       - HDHOMERUN_DEBUG_MODE=on
     restart: unless-stopped
+
+volumes:
+  epg-cache:
